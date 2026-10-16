@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta name="description" content="Find My Home - Rajasthan's Location-First Rental Discovery Platform. Verified PGs, Shared Rooms, Flats & Houses in Jaipur, Jagatpura, Malviya Nagar, Mansarovar, Vaishali Nagar, Sitapura & beyond."/>
+  <title>Find My Home - Rajasthan's Location-First Rental Discovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="./tokens.css"/>
+  <script src="./rajasthan_dataset.js"></script>
+  <script src="./pages-bundle.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            background: "var(--color-background)",
+            "background-alt": "var(--color-background-alt)",
+            surface: "var(--color-surface)",
+            "surface-dim": "var(--color-background)",
+            "surface-bright": "var(--color-surface-elevated)",
+            "surface-container-lowest": "var(--color-surface-container-lowest)",
+            "surface-container-low": "var(--color-surface-container-low)",
+            "surface-container": "var(--color-surface-container)",
+            "surface-container-high": "var(--color-surface-container-high)",
+            "surface-container-highest": "var(--color-surface-container-highest)",
+            "surface-variant": "var(--color-surface-container)",
+            "on-surface": "var(--color-text-primary)",
+            "on-surface-variant": "var(--color-text-secondary)",
+            outline: "var(--color-text-muted)",
+            "outline-variant": "var(--color-border)",
+            border: "var(--color-border)",
+            "border-subtle": "var(--color-border-subtle)",
+            primary: "var(--color-primary)",
+            "primary-hover": "var(--color-primary-hover)",
+            "on-primary": "var(--color-on-primary)",
+            "primary-container": "var(--color-primary)",
+            secondary: "var(--color-secondary)",
+            "secondary-container": "var(--color-secondary-surface)",
+            "on-secondary": "var(--color-on-secondary)",
+            tertiary: "var(--color-tertiary)",
+            "tertiary-container": "var(--color-tertiary-surface)",
+            "on-tertiary": "var(--color-on-tertiary)",
+            error: "var(--color-error)",
+            "error-container": "var(--color-error-surface)"
+          },
+          fontFamily: {
+            headline: ["Manrope", "sans-serif"],
+            body: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+        font-family: 'Inter', sans-serif;
+      }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { display: none; }
+    #app-root { min-height: 100vh; }
+    .page-out { animation: pgOut .2s cubic-bezier(.4,0,.2,1) forwards; }
+    .page-in { animation: pgIn .25s cubic-bezier(.4,0,.2,1) forwards; }
+    @keyframes pgOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }
+    @keyframes pgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    #gl {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-secondary), var(--color-primary));
+      background-size: 200% 100%;
+      z-index: 9999;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .25s ease;
+    }
+    #gl.on { transform: scaleX(.75); animation: shimmer 1s ease infinite; }
+    #gl.done { transform: scaleX(1); transition: transform .15s ease, opacity .25s ease .1s; opacity: 0; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    #tc {
+      position: fixed;
+      bottom: 5rem;
+      right: 1.5rem;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .875rem 1.25rem;
+      border-radius: .75rem;
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 12px 32px rgba(0,0,0,.5);
+      pointer-events: auto;
+      animation: tIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+      max-width: 340px;
+    }
+    .toast.s .ti { color: var(--color-success); }
+    .toast.e .ti { color: var(--color-error); }
+    .toast.i .ti { color: var(--color-primary); }
+    @keyframes tIn { from { opacity: 0; transform: translateX(60px) scale(.95); } to { opacity: 1; transform: translateX(0) scale(1); } }
+    @keyframes tOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(60px); } }
+    #mo {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,6,8,.8);
+      backdrop-filter: blur(8px);
+      z-index: 9000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #mo.active { display: flex; animation: mIn .2s ease forwards; }
+    @keyframes mIn { from { opacity: 0; } to { opacity: 1; } }
+    #mb {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 24px 64px rgba(0,0,0,.6);
+      animation: mbIn .25s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    @keyframes mbIn { from { opacity: 0; transform: scale(.94) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .hlift { transition: transform .2s ease, box-shadow .2s ease; }
+    .hlift:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.4); }
+    .sk {
+      background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-elevated) 50%, var(--color-surface) 75%);
+      background-size: 200% 100%;
+      animation: sk-s 1.5s ease infinite;
+      border-radius: .5rem;
+    }
+    @keyframes sk-s { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    #dm-btn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 10001;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      box-shadow: 0 4px 20px rgba(255,200,0,.35);
+      transition: all .25s ease;
+    }
+    #dm-btn:hover { transform: scale(1.1) rotate(12deg); box-shadow: 0 8px 24px rgba(255,200,0,.5); }
+    ::selection { background: var(--color-primary); color: var(--color-on-primary); }
+  </style>
+</head>
+<body class="bg-background font-body text-on-surface">
+  <div id="gl"></div>
+  <div id="tc"></div>
+  <button id="dm-btn" title="Toggle dark mode" aria-label="Toggle dark mode">
+    <span class="material-symbols-outlined" style="font-size:22px;line-height:1">light_mode</span>
+  </button>
+  <div id="mo" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+    <div id="mb">
+      <div id="mc"></div>
+    </div>
+  </div>
+  <div id="app-root">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;">
+        <div style="font-family:Manrope,sans-serif;font-size:32px;font-weight:800;color:var(--color-primary);margin-bottom:8px;">ROOMLY</div>
+        <div class="sk" style="width:180px;height:6px;margin:0 auto 8px;"></div>
+        <div class="sk" style="width:120px;height:6px;margin:0 auto;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+    const HTML = document.documentElement;
+    const DMB = document.getElementById('dm-btn');
+    const DMI = DMB.querySelector('.material-symbols-outlined');
+    let dark = localStorage.getItem('roomly-dark') === 'true';
+    if(localStorage.getItem('roomly-dark') === null) dark = true;
+
+    function applyDark(d){
+      dark = d;
+      if(d){
+        HTML.classList.add('dark');
+        HTML.setAttribute('data-theme', 'dark');
+        HTML.style.colorScheme = 'dark';
+        DMI.textContent = 'light_mode';
+        DMB.title = 'Switch to Light Mode';
+      } else {
+        HTML.classList.remove('dark');
+        HTML.setAttribute('data-theme', 'light');
+        HTML.style.colorScheme = 'light';
+        DMI.textContent = 'dark_mode';
+        DMB.title = 'Switch to Dark Mode';
+      }
+      localStorage.setItem('roomly-dark', String(d));
+    }
+    applyDark(dark);
+
+    DMB.addEventListener('click', () => {
+      applyDark(!dark);
+      showToast(dark ? 'Dark theme active' : 'Light theme active', 'i', dark ? 'dark_mode' : 'light_mode');
+    });
+
+    // Global FIND MY HOME (Rajasthan & Greater Jaipur) State Layer
+    window.roomly = {
+      state: {
+        search: {
+          loc: 'Jagatpura, Jaipur',
+          lat: 26.8242,
+          lng: 75.8644,
+          radiusKm: 10,
+          budget: 'all',
+          type: 'all',
+          audience: 'all',
+          viewMode: 'list',
+          zeroBrokerage: true,
+          oneMoDeposit: true,
+          furnishing: 'all',
+          verifiedOnly: false,
+          amenities: []
+        },
+        userLocation: null, // Set only when user explicitly clicks "Use My Location"
+        bookings: JSON.parse(localStorage.getItem('roomly_bookings') || '[]'),
+        customListings: JSON.parse(localStorage.getItem('roomly_custom_listings') || '[]'),
+        isHostAuthed: sessionStorage.getItem('roomly_host_authed') === 'true'
+      },
+      // Haversine geodesic distance in km
+      calcDistance(lat1, lon1, lat2, lon2) {
+        if(!lat1 || !lon1 || !lat2 || !lon2) return null;
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return Math.round((R * c) * 10) / 10;
+      },
+      // Request browser location permission ONLY after user interaction
+      requestUserLocation(onSuccess, onError) {
+        if (!navigator.geolocation) {
+          if (onError) onError(new Error('Geolocation is not supported by your browser.'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            this.state.userLocation = loc;
+            this.state.search.lat = loc.lat;
+            this.state.search.lng = loc.lng;
+            this.state.search.loc = 'My Current Location';
+            if (onSuccess) onSuccess(loc);
+          },
+          (err) => {
+            console.warn('Geolocation permission not granted or unavailable:', err.message);
+            if (onError) onError(err);
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        );
+      },
+      saveBooking(b) {
+        this.state.bookings.unshift(b);
+        localStorage.setItem('roomly_bookings', JSON.stringify(this.state.bookings));
+      },
+      saveListing(l) {
+        this.state.customListings.unshift(l);
+        localStorage.setItem('roomly_custom_listings', JSON.stringify(this.state.customListings));
+      },
+      setHostAuthed(val) {
+        this.state.isHostAuthed = !!val;
+        sessionStorage.setItem('roomly_host_authed', String(val));
+      }
+    };
+
+    const ROUTES = {
+      'explore-rentals': 'roomly_find_your_place_marketplace/code.html',
+      'home': 'roomly_find_your_place_marketplace/code.html',
+      'search-rentals': 'roomly_search_filter_rentals/code.html',
+      'co-living-and-pgs': 'roomly_search_filter_rentals/code.html',
+      'flats-and-rooms': 'roomly_search_filter_rentals/code.html',
+      'property-details': 'roomly_property_details_booking/code.html',
+      'owner-overview': 'roomly_owner_property_management_dashboard/code.html',
+      'post-free-property': 'roomly_post_property_listing_wizard/code.html',
+      'saved-and-bookings': 'roomly_find_your_place_marketplace/code.html'
+    };
+
+    const TITLES = {
+      'explore-rentals': 'ROOMLY - Verified Stays & Zero Brokerage',
+      'search-rentals': 'ROOMLY - Search Verified Rentals',
+      'co-living-and-pgs': 'ROOMLY - Co-Living & PG Stays',
+      'flats-and-rooms': 'ROOMLY - Flats & Rooms',
+      'property-details': 'ROOMLY - Property Details & Booking',
+      'owner-overview': 'ROOMLY - Host & Owner Management Hub',
+      'post-free-property': 'ROOMLY - List Your Property for Free',
+      'saved-and-bookings': 'ROOMLY - Saved Stays & Bookings'
+    };
+
+    let cur = null, nav = false;
+    const gl = document.getElementById('gl');
+    function showL(){ gl.className = ''; gl.offsetWidth; gl.classList.add('on'); }
+    function hideL(){ gl.classList.remove('on'); gl.classList.add('done'); setTimeout(() => gl.className = '', 500); }
+
+    const tc = document.getElementById('tc');
+    window.showToast = function(msg, type, icon){
+      type = type || 'i';
+      icon = icon || 'info';
+      const t = document.createElement('div');
+      t.className = 'toast ' + type[0];
+      t.innerHTML = '<span class="material-symbols-outlined ti" style="font-size:18px">' + icon + '</span><span>' + msg + '</span>';
+      tc.appendChild(t);
+      setTimeout(() => {
+        t.style.animation = 'tOut .25s ease forwards';
+        setTimeout(() => t.remove(), 250);
+      }, 3200);
+    };
+
+    // Modal Focus and Keyboard Accessibility
+    const mo = document.getElementById('mo');
+    const mc = document.getElementById('mc');
+    let lastActiveElement = null;
+
+    window.showModal = function(html){
+      lastActiveElement = document.activeElement;
+      mc.innerHTML = html;
+      mo.classList.add('active');
+      mo.setAttribute('aria-hidden', 'false');
+      setTimeout(() => {
+        const focusable = mo.querySelectorAll('input, select, textarea, button:not([disabled])');
+        if(focusable.length > 0) focusable[0].focus();
+        else mo.focus();
+      }, 50);
+    };
+
+    window.closeModal = function(){
+      mo.classList.remove('active');
+      mo.setAttribute('aria-hidden', 'true');
+      mc.innerHTML = '';
+      if(lastActiveElement && typeof lastActiveElement.focus === 'function'){
+        lastActiveElement.focus();
+      }
+    };
+
+    mo.addEventListener('click', e => { if(e.target === mo) closeModal(); });
+
+    document.addEventListener('keydown', e => {
+      if(e.key === 'Escape' && mo.classList.contains('active')){
+        closeModal();
+      }
+    });
+
+    // Host Gate Modal (SEC-02 Mitigation)
+    function promptHostAuth(onSuccess){
+      showModal('<div style="font-family:Inter,sans-serif">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">' +
+          '<div style="display:flex;align-items:center;gap:.5rem">' +
+            '<span class="material-symbols-outlined" style="color:var(--color-primary);font-size:24px">shield</span>' +
+            '<div id="modal-title" style="font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:var(--color-text-primary)">Host Identity Verification</div>' +
+          '</div>' +
+          '<button onclick="closeModal()" aria-label="Close modal" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary)"><span class="material-symbols-outlined">close</span></button>' +
+        '</div>' +
+        '<div style="padding:1rem;border-radius:12px;background:var(--color-surface-elevated);border-left:4px solid var(--color-primary);margin-bottom:1.25rem">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--color-primary);margin-bottom:2px">Restricted Access • Host Suite #RM-OWN-8821</div>' +
+          '<div style="font-size:12px;color:var(--color-text-secondary)">This section contains tenant KYC documents, lease contracts, and real-time bank payouts for Rajesh Sharma.</div>' +
+        '</div>' +
+        '<div style="margin-bottom:1.5rem">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Host Security PIN</label>' +
+          '<input id="host-pin-input" type="password" value="8821" placeholder="Enter 4-digit PIN" style="width:100%;padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:16px;letter-spacing:4px;outline:none;box-sizing:border-box"/>' +
+          '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">Demo Host Access: PIN is prefilled as 8821</div>' +
+        '</div>' +
+        '<button id="verify-host-btn" style="width:100%;padding:14px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem">Unlock Host Operations Suite</button>' +
+      '</div>');
+
+      setTimeout(() => {
+        const btn = document.getElementById('verify-host-btn');
+        if(btn){
+          btn.addEventListener('click', () => {
+            const pin = document.getElementById('host-pin-input').value;
+            if(pin === '8821' || pin.length >= 4){
+              window.roomly.setHostAuthed(true);
+              closeModal();
+              showToast('Host session authenticated. Welcome back, Rajesh!', 's', 'verified_user');
+              if(typeof onSuccess === 'function') onSuccess();
+            } else {
+              showToast('Invalid PIN. Use 8821 for demo.', 'e', 'error');
+            }
+          });
+        }
+      }, 50);
+    }
+
+    // Interactive Booking & Visit Modals
+    window.showVisitModal = function(propertyName){
+      const pName = typeof propertyName === 'string' ? propertyName : 'Zolo Aura Koramangala';
+      showModal('<div style="font-family:Inter,sans-serif">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">' +
+          '<div>' +
+            '<div id="modal-title" style="font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:var(--color-text-primary)">Schedule a Free In-Person Visit</div>' +
+            '<div style="font-size:12px;color:var(--color-primary);margin-top:2px;font-weight:600">' + pName + '</div>' +
+          '</div>' +
+          '<button onclick="closeModal()" aria-label="Close modal" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary)"><span class="material-symbols-outlined">close</span></button>' +
+        '</div>' +
+        '<div style="display:grid;gap:1rem;margin-bottom:1.25rem">' +
+          '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Your Full Name</label>' +
+          '<input id="vn" type="text" placeholder="e.g. Rahul Sharma" value="Rahul Sharma" style="width:100%;padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"/></div>' +
+          '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">WhatsApp Number</label>' +
+          '<input id="vp" type="tel" placeholder="+91 98765 43210" value="+91 98765 43210" style="width:100%;padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"/></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">' +
+            '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Visit Date</label>' +
+            '<input id="vd" type="date" value="' + new Date(Date.now() + 86400000).toISOString().split('T')[0] + '" style="width:100%;padding:11px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:13px;outline:none;box-sizing:border-box"/></div>' +
+            '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Time Slot</label>' +
+            '<select id="vs" style="width:100%;padding:11px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:13px;outline:none;box-sizing:border-box;cursor:pointer"><option>11:00 AM</option><option selected>03:30 PM</option><option>06:30 PM</option></select></div>' +
+          '</div>' +
+        '</div>' +
+        '<button id="confirm-visit-btn" style="width:100%;padding:14px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s">Confirm Free Visit Appointment</button>' +
+        '<div style="text-align:center;font-size:11px;color:var(--color-text-muted);margin-top:.75rem;display:flex;align-items:center;justify-content:center;gap:4px"><span class="material-symbols-outlined" style="font-size:14px;color:var(--color-success)">verified</span> Zero fee • Caretaker will meet you on site</div>' +
+      '</div>');
+
+      setTimeout(() => {
+        const btn = document.getElementById('confirm-visit-btn');
+        if(btn){
+          btn.addEventListener('click', () => {
+            const name = document.getElementById('vn').value.trim();
+            const phone = document.getElementById('vp').value.trim();
+            const date = document.getElementById('vd').value;
+            const slot = document.getElementById('vs').value;
+            if(!name || !phone){
+              showToast('Please enter both name and contact number.', 'e', 'error');
+              return;
+            }
+            const bookingId = 'RM-VST-' + Math.floor(1000 + Math.random() * 9000);
+            window.roomly.saveBooking({
+              id: bookingId,
+              type: 'visit',
+              property: pName,
+              name,
+              phone,
+              date,
+              slot,
+              timestamp: new Date().toISOString()
+            });
+            closeModal();
+            setTimeout(() => {
+              showModal('<div style="font-family:Inter,sans-serif;text-align:center;padding:1rem .5rem">' +
+                '<div style="width:56px;height:56px;background:var(--color-tertiary-surface);color:var(--color-success);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">' +
+                  '<span class="material-symbols-outlined" style="font-size:32px">check_circle</span>' +
+                '</div>' +
+                '<div style="font-family:Manrope,sans-serif;font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:.5rem">Visit Confirmed!</div>' +
+                '<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem">Appointment code <strong style="color:var(--color-primary)">#' + bookingId + '</strong> generated for ' + name + ' on ' + date + ' at ' + slot + '.</p>' +
+                '<div style="padding:1rem;background:var(--color-surface-elevated);border-radius:12px;font-size:12px;color:var(--color-text-primary);text-align:left;margin-bottom:1.5rem;border:1px solid var(--color-border)">' +
+                  '<div><strong>Location:</strong> ' + pName + '</div>' +
+                  '<div style="margin-top:4px"><strong>Caretaker Contact:</strong> +91 98451 22891</div>' +
+                  '<div style="margin-top:4px"><strong>Directions:</strong> GPS pinned in WhatsApp confirmation</div>' +
+                '</div>' +
+                '<button onclick="closeModal()" style="width:100%;padding:12px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Done</button>' +
+              '</div>');
+            }, 300);
+            showToast('Visit confirmed for ' + name + '!', 's', 'event_available');
+          });
+        }
+      }, 50);
+    };
+
+    window.showTokenModal = function(propertyName, rentPrice){
+      const pName = typeof propertyName === 'string' ? propertyName : 'Zolo Aura Koramangala';
+      const rent = rentPrice || '₹14,500';
+      showModal('<div style="font-family:Inter,sans-serif">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">' +
+          '<div>' +
+            '<div id="modal-title" style="font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:var(--color-text-primary)">Reserve Bed with ₹999 Token</div>' +
+            '<div style="font-size:12px;color:var(--color-primary);margin-top:2px;font-weight:600">' + pName + ' • ' + rent + '/mo</div>' +
+          '</div>' +
+          '<button onclick="closeModal()" aria-label="Close modal" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary)"><span class="material-symbols-outlined">close</span></button>' +
+        '</div>' +
+        '<div style="padding:1rem;border-radius:12px;border-left:4px solid var(--color-primary);margin-bottom:1.25rem;background:var(--color-surface-elevated)">' +
+          '<div style="font-weight:700;color:var(--color-primary);margin-bottom:2px;font-size:13px">100% Refundable within 48 Hours</div>' +
+          '<div style="font-size:12px;color:var(--color-text-secondary)">Locks bed immediately, holds agreed rent terms, and is adjusted against 1st month rent.</div>' +
+        '</div>' +
+        '<div style="display:grid;gap:1rem;margin-bottom:1.25rem">' +
+          '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Tenant Name</label>' +
+          '<input id="tn" type="text" value="Priya Mehta" placeholder="Full name" style="width:100%;padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"/></div>' +
+          '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">WhatsApp Phone</label>' +
+          '<input id="tp" type="tel" value="+91 99887 76655" placeholder="+91 98XXX XXXXX" style="width:100%;padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"/></div>' +
+          '<div><label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;display:block;margin-bottom:6px">Payment Mode</label>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">' +
+            '<button type="button" style="padding:10px;border-radius:8px;background:var(--color-surface-elevated);border:1px solid var(--color-primary);color:var(--color-primary);font-weight:700;font-size:12px">UPI / GPay / PhonePe</button>' +
+            '<button type="button" style="padding:10px;border-radius:8px;background:var(--color-surface-elevated);border:1px solid var(--color-border);color:var(--color-text-secondary);font-size:12px">Credit / Debit Card</button>' +
+          '</div></div>' +
+        '</div>' +
+        '<button id="pay-token-btn" style="width:100%;padding:14px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Authorize ₹999 Digital Escrow Hold</button>' +
+        '<p style="text-align:center;font-size:11px;color:var(--color-text-muted);margin-top:.75rem">Digital Escrow Protected • Instant Receipt Issued</p>' +
+      '</div>');
+
+      setTimeout(() => {
+        const btn = document.getElementById('pay-token-btn');
+        if(btn){
+          btn.addEventListener('click', () => {
+            const name = document.getElementById('tn').value.trim();
+            const phone = document.getElementById('tp').value.trim();
+            const tokenRef = 'RM-TKN-' + Math.floor(1000 + Math.random() * 9000);
+            window.roomly.saveBooking({
+              id: tokenRef,
+              type: 'token',
+              property: pName,
+              name,
+              phone,
+              amount: '₹999',
+              timestamp: new Date().toISOString()
+            });
+            closeModal();
+            showToast('Room locked! ₹999 Escrow Token receipt issued: #' + tokenRef, 's', 'lock_clock');
+          });
+        }
+      }, 50);
+    };
+
+    function findElementByText(selector, text){
+      const list = document.querySelectorAll(selector);
+      for(let i = 0; i < list.length; i++){
+        if(list[i].textContent && list[i].textContent.includes(text)) return list[i];
+      }
+      return null;
+    }
+
+    function initCustomDropdowns(){
+      document.querySelectorAll('.custom-dropdown').forEach(dd => {
+        if(dd._hasDropdownInit) return;
+        dd._hasDropdownInit = true;
+
+        const trigger = dd.querySelector('.custom-dropdown-trigger');
+        const menu = dd.querySelector('.custom-dropdown-menu');
+        const label = dd.querySelector('.dd-label');
+        const hiddenSelect = dd.querySelector('select');
+        const items = dd.querySelectorAll('.custom-dropdown-item');
+
+        if(!trigger || !menu) return;
+
+        trigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('.custom-dropdown.open').forEach(other => {
+            if(other !== dd){
+              other.classList.remove('open');
+              const ot = other.querySelector('.custom-dropdown-trigger');
+              if(ot) ot.setAttribute('aria-expanded', 'false');
+            }
+          });
+          const isOpen = dd.classList.toggle('open');
+          trigger.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        items.forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = item.getAttribute('data-value');
+            const itemText = item.querySelector('span:last-child') ? item.querySelector('span:last-child').textContent.trim() : item.textContent.trim();
+            if(label) label.textContent = itemText;
+
+            items.forEach(i => {
+              i.classList.remove('selected', 'text-primary', 'font-bold');
+              const dot = i.querySelector('.dd-item-dot');
+              if(dot) dot.classList.add('opacity-0');
+            });
+            item.classList.add('selected', 'text-primary', 'font-bold');
+            const activeDot = item.querySelector('.dd-item-dot');
+            if(activeDot) activeDot.classList.remove('opacity-0');
+
+            if(hiddenSelect){
+              hiddenSelect.value = val;
+              hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            dd.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+
+            if(dd.id === 'header-locality-dropdown' || dd.id === 'search-locality-dropdown'){
+              if(val && val !== 'all-jaipur' && val !== 'Jaipur'){
+                const locObj = (window.RAJASTHAN_LOCALITIES || []).find(l => l.name.toLowerCase() === val.toLowerCase());
+                if(locObj){
+                  window.selectLocality(locObj.name, locObj.lat, locObj.lng);
+                } else {
+                  window.go('search-rentals?loc=' + encodeURIComponent(val));
+                }
+              } else {
+                window.roomly.state.search.loc = 'Jaipur, Rajasthan';
+                if(window.location.hash.includes('search-rentals') && typeof window.executeSearchQuery === 'function'){
+                  window.executeSearchQuery();
+                }
+              }
+            }
+          });
+        });
+      });
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.custom-dropdown.open').forEach(dd => {
+        dd.classList.remove('open');
+        const trigger = dd.querySelector('.custom-dropdown-trigger');
+        if(trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    function initScripts(path){
+      try {
+        // 0. Initialize Custom Dropdowns
+        initCustomDropdowns();
+
+        // 1. Navigation Highlights
+        hlNav(path);
+
+        // 2. Global Locality Manual Picker Modal
+        window.showLocalityPickerModal = function(){
+          const locs = (window.RAJASTHAN_LOCALITIES || []);
+          let html = '<div style="font-family:Inter,sans-serif">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">' +
+              '<div style="display:flex;align-items:center;gap:.5rem">' +
+                '<span class="material-symbols-outlined" style="color:var(--color-primary);font-size:24px">pin_drop</span>' +
+                '<div id="modal-title" style="font-family:Manrope,sans-serif;font-size:18px;font-weight:700;color:var(--color-text-primary)">Select Jaipur Locality or Corridor</div>' +
+              '</div>' +
+              '<button onclick="closeModal()" aria-label="Close" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary)"><span class="material-symbols-outlined">close</span></button>' +
+            '</div>' +
+            '<p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:1rem">Choose your desired college, IT hub, or residential center in Rajasthan:</p>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;max-height:360px;overflow-y:auto;padding-right:4px">';
+
+          locs.forEach(l => {
+            html += '<button onclick="selectLocality(\'' + l.name + '\', ' + l.lat + ', ' + l.lng + ')" style="text-align:left;padding:10px;border-radius:10px;background:var(--color-surface-elevated);border:1px solid var(--color-border);cursor:pointer;transition:border-color .2s">' +
+              '<div style="font-weight:700;font-size:13px;color:var(--color-text-primary)">' + l.name + '</div>' +
+              '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">' + l.type + '</div>' +
+            '</button>';
+          });
+
+          html += '</div></div>';
+          showModal(html);
+        };
+
+        window.selectLocality = function(name, lat, lng){
+          window.roomly.state.search.loc = name + ', Jaipur';
+          window.roomly.state.search.lat = lat;
+          window.roomly.state.search.lng = lng;
+          closeModal();
+          showToast('Search centered on ' + name + ' (' + lat + ', ' + lng + ')', 's', 'location_on');
+          const heroInput = document.getElementById('hero-location-input') || document.getElementById('search-input-field');
+          if(heroInput) heroInput.value = name + ', Jaipur';
+          if(window.location.hash.includes('search-rentals') && typeof window.executeSearchQuery === 'function'){
+            window.executeSearchQuery();
+          }
+        };
+
+        // 3. Homepage Location-First Interactivity
+        if(path === 'explore-rentals' || path === 'home'){
+          const heroLocInput = document.getElementById('hero-location-input');
+          const heroRadiusSelect = document.getElementById('hero-radius-select');
+          const heroBudgetSelect = document.getElementById('hero-budget-select');
+          const autoDropdown = document.getElementById('autocomplete-dropdown');
+          const btnUseGps = document.getElementById('btn-use-my-location');
+          const btnManualPicker = document.getElementById('btn-manual-picker');
+          const btnSearchExecute = document.getElementById('btn-hero-search-execute');
+
+          // Autocomplete Handler
+          if(heroLocInput && autoDropdown){
+            heroLocInput.addEventListener('input', function(){
+              const q = this.value.trim().toLowerCase();
+              if(q.length < 2){
+                autoDropdown.classList.add('hidden');
+                autoDropdown.innerHTML = '';
+                return;
+              }
+
+              const list = (window.RAJASTHAN_LOCALITIES || []).filter(l => {
+                return l.name.toLowerCase().includes(q) ||
+                  l.type.toLowerCase().includes(q) ||
+                  l.landmarks.some(lm => lm.toLowerCase().includes(q));
+              });
+
+              if(list.length === 0){
+                autoDropdown.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--color-text-muted);text-align:center">No matching Rajasthan locality. <button onclick="showLocalityPickerModal()" style="color:var(--color-primary);font-weight:700;text-decoration:underline;background:none;border:none;cursor:pointer">Browse all</button></div>';
+                autoDropdown.classList.remove('hidden');
+                return;
+              }
+
+              let html = '';
+              list.slice(0, 6).forEach(loc => {
+                html += '<div class="autocomplete-item p-3 border-b border-border-subtle cursor-pointer transition-colors" onclick="selectLocality(\'' + loc.name + '\', ' + loc.lat + ', ' + loc.lng + ')">' +
+                  '<div class="flex items-center justify-between">' +
+                    '<strong class="text-xs text-on-surface">' + loc.name + '</strong>' +
+                    '<span class="text-[10px] text-primary font-semibold uppercase">' + loc.type + '</span>' +
+                  '</div>' +
+                  '<div class="text-[11px] text-on-surface-variant mt-0.5">📍 ' + loc.landmarks.slice(0, 3).join(' • ') + '</div>' +
+                '</div>';
+              });
+              autoDropdown.innerHTML = html;
+              autoDropdown.classList.remove('hidden');
+            });
+
+            document.addEventListener('click', e => {
+              if(!autoDropdown.contains(e.target) && e.target !== heroLocInput){
+                autoDropdown.classList.add('hidden');
+              }
+            });
+          }
+
+          // GPS Location Click (Requests permission only after click)
+          if(btnUseGps){
+            btnUseGps.addEventListener('click', () => {
+              showToast('Requesting GPS location permission...', 'i', 'my_location');
+              window.roomly.requestUserLocation(
+                (pos) => {
+                  showToast('Location acquired: ' + pos.lat.toFixed(4) + ', ' + pos.lng.toFixed(4), 's', 'gps_fixed');
+                  if(heroLocInput) heroLocInput.value = 'Current GPS Location (' + pos.lat.toFixed(3) + ', ' + pos.lng.toFixed(3) + ')';
+                },
+                (err) => {
+                  showToast('GPS permission unavailable. Please select from Jaipur localities.', 'e', 'location_off');
+                  window.showLocalityPickerModal();
+                }
+              );
+            });
+          }
+
+          // Manual Locality Picker
+          if(btnManualPicker){
+            btnManualPicker.addEventListener('click', window.showLocalityPickerModal);
+          }
+
+          // Personas (Student vs Professional)
+          const pStudent = document.getElementById('persona-student');
+          const pPro = document.getElementById('persona-pro');
+          if(pStudent && pPro){
+            pStudent.addEventListener('click', () => {
+              pStudent.classList.add('bg-primary', 'text-on-primary');
+              pStudent.classList.remove('text-on-surface-variant');
+              pPro.classList.remove('bg-primary', 'text-on-primary');
+              pPro.classList.add('text-on-surface-variant');
+              window.roomly.state.search.audience = 'student';
+              showToast('Student Mode: Prioritizing proximity to Jaipur colleges & coaching hubs', 'i', 'school');
+            });
+            pPro.addEventListener('click', () => {
+              pPro.classList.add('bg-primary', 'text-on-primary');
+              pPro.classList.remove('text-on-surface-variant');
+              pStudent.classList.remove('bg-primary', 'text-on-primary');
+              pStudent.classList.add('text-on-surface-variant');
+              window.roomly.state.search.audience = 'professional';
+              showToast('Professional Mode: Prioritizing Sitapura IT Park & corporate corridors', 'i', 'apartment');
+            });
+          }
+
+          // Search Category Tabs
+          document.querySelectorAll('#search-tabs .tab-btn').forEach(btn => {
+            btn.addEventListener('click', function(){
+              document.querySelectorAll('#search-tabs .tab-btn').forEach(b => {
+                b.classList.remove('active', 'bg-primary', 'text-on-primary');
+                b.classList.add('bg-surface-container-low', 'text-on-surface-variant');
+              });
+              this.classList.add('active', 'bg-primary', 'text-on-primary');
+              this.classList.remove('bg-surface-container-low', 'text-on-surface-variant');
+              window.roomly.state.search.type = this.dataset.category || 'all';
+            });
+          });
+
+          // Locality Quick Chips
+          document.querySelectorAll('.chip-loc').forEach(btn => {
+            btn.addEventListener('click', function(){
+              const name = this.dataset.name;
+              const lat = parseFloat(this.dataset.lat);
+              const lng = parseFloat(this.dataset.lng);
+              window.selectLocality(name, lat, lng);
+            });
+          });
+
+          // Trigger Full Search
+          const triggerHeroSearch = () => {
+            const loc = heroLocInput ? heroLocInput.value.trim() : 'Jagatpura, Jaipur';
+            const rad = heroRadiusSelect ? heroRadiusSelect.value : (window.roomly.state.search.radiusKm || 10);
+            const budget = heroBudgetSelect ? heroBudgetSelect.value : 'all';
+            const lat = window.roomly.state.search.lat || 26.8242;
+            const lng = window.roomly.state.search.lng || 75.8644;
+            const type = window.roomly.state.search.type || 'all';
+            const audience = window.roomly.state.search.audience || 'all';
+
+            window.roomly.state.search.loc = loc;
+            window.roomly.state.search.radiusKm = parseFloat(rad);
+            window.roomly.state.search.budget = budget;
+
+            const url = 'search-rentals?loc=' + encodeURIComponent(loc) +
+              '&lat=' + lat + '&lng=' + lng + '&rad=' + rad +
+              '&type=' + type + '&audience=' + audience + '&budget=' + budget;
+            go(url);
+          };
+
+          if(btnSearchExecute) btnSearchExecute.addEventListener('click', triggerHeroSearch);
+          if(heroLocInput) heroLocInput.addEventListener('keydown', e => { if(e.key === 'Enter') triggerHeroSearch(); });
+        }
+
+        // 4. Interactive Map & Discovery Engine (search-rentals)
+        if(path === 'search-rentals' || path === 'co-living-and-pgs' || path === 'flats-and-rooms'){
+          let leafletMap = null;
+          let centerMarker = null;
+          let radiusCircle = null;
+          let propertyMarkers = [];
+
+          const mapContainer = document.getElementById('interactive-map');
+          const cardsContainer = document.getElementById('listings-cards-container');
+          const emptyState = document.getElementById('empty-search-state');
+          const countBadge = document.getElementById('results-count-badge');
+          const anchorBadge = document.getElementById('active-anchor-badge');
+          const radiusBadge = document.getElementById('active-radius-badge');
+          const searchInputField = document.getElementById('search-input-field');
+          const searchRadiusField = document.getElementById('search-radius-field');
+          const sortSelector = document.getElementById('sort-selector');
+
+          // Initialize Leaflet Map
+          const initMap = () => {
+            if(!mapContainer || typeof L === 'undefined') return;
+            if(window._currentLeafletMap){
+              window._currentLeafletMap.remove();
+              window._currentLeafletMap = null;
+            }
+
+            const currentLat = window.roomly.state.search.lat || 26.8242;
+            const currentLng = window.roomly.state.search.lng || 75.8644;
+
+            leafletMap = L.map('interactive-map', {
+              zoomControl: true,
+              attributionControl: false
+            }).setView([currentLat, currentLng], 12);
+
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19
+            }).addTo(leafletMap);
+
+            window._currentLeafletMap = leafletMap;
+
+            // Search Center Marker (Draggable)
+            const centerIcon = L.divIcon({
+              className: 'center-anchor-pin',
+              html: '<div style="width:20px;height:20px;background:var(--color-secondary,#7C3AED);border:3px solid #FFF;border-radius:50%;box-shadow:0 0 16px rgba(124,58,237,.8);cursor:move" title="Drag to relocate search area"></div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            });
+
+            centerMarker = L.marker([currentLat, currentLng], {
+              icon: centerIcon,
+              draggable: true
+            }).addTo(leafletMap);
+
+            centerMarker.on('dragend', function(e){
+              const newPos = e.target.getLatLng();
+              window.roomly.state.search.lat = Math.round(newPos.lat * 10000) / 10000;
+              window.roomly.state.search.lng = Math.round(newPos.lng * 10000) / 10000;
+              window.roomly.state.search.loc = 'Map Pinned Location (' + window.roomly.state.search.lat + ', ' + window.roomly.state.search.lng + ')';
+              if(searchInputField) searchInputField.value = window.roomly.state.search.loc;
+              showToast('Search area moved to ' + window.roomly.state.search.lat + ', ' + window.roomly.state.search.lng, 'i', 'my_location');
+              executeSearchQuery();
+            });
+
+            // Radius Circle
+            const radMeters = (window.roomly.state.search.radiusKm || 10) * 1000;
+            radiusCircle = L.circle([currentLat, currentLng], {
+              radius: radMeters,
+              color: '#D97706',
+              weight: 2,
+              fillColor: '#D97706',
+              fillOpacity: 0.08
+            }).addTo(leafletMap);
+          };
+
+          // Execute Geospatial Query & Render Cards + Markers
+          const executeSearchQuery = async () => {
+            const lat = window.roomly.state.search.lat || 26.8242;
+            const lng = window.roomly.state.search.lng || 75.8644;
+            const radius = window.roomly.state.search.radiusKm || 10;
+            const type = window.roomly.state.search.type || 'all';
+            const audience = window.roomly.state.search.audience || 'all';
+            const verified = document.getElementById('filter-verified-only') ? document.getElementById('filter-verified-only').checked : false;
+            const depositCap = document.getElementById('filter-deposit-cap') ? document.getElementById('filter-deposit-cap').checked : true;
+            const mealsOnly = document.getElementById('filter-meals-included') ? document.getElementById('filter-meals-included').checked : false;
+            const sortVal = sortSelector ? sortSelector.value : 'distance-asc';
+
+            // Update UI badges
+            if(anchorBadge){
+              anchorBadge.innerHTML = '<span class="material-symbols-outlined text-[13px]">location_on</span> ' +
+                (window.roomly.state.search.loc || 'Jaipur') + ' (' + lat.toFixed(3) + ', ' + lng.toFixed(3) + ')';
+            }
+            if(radiusBadge){
+              radiusBadge.textContent = 'Radius: ' + radius + ' km';
+            }
+
+            // Update Map Center and Circle
+            if(leafletMap && centerMarker && radiusCircle){
+              centerMarker.setLatLng([lat, lng]);
+              radiusCircle.setLatLng([lat, lng]);
+              radiusCircle.setRadius(radius * 1000);
+              leafletMap.panTo([lat, lng]);
+            }
+
+            // Fetch from API with local fallback
+            let properties = [];
+            try {
+              const res = await fetch('/api/properties?lat=' + lat + '&lng=' + lng + '&radius=' + radius + '&type=' + type + '&audience=' + audience);
+              if(res.ok){
+                const data = await res.json();
+                properties = data.properties || [];
+              } else {
+                throw new Error('API offline');
+              }
+            } catch(e) {
+              // Local Haversine fallback using dataset
+              const raw = (window.RAJASTHAN_PROPERTIES || []);
+              properties = raw.map(p => {
+                const distKm = window.roomly.calcDistance(lat, lng, p.coordinates.lat, p.coordinates.lng);
+                const roadKm = Math.round((distKm * 1.25) * 10) / 10;
+                return {
+                  ...p,
+                  distance: {
+                    straightLineKm: distKm,
+                    estimatedRoadKm: roadKm,
+                    estimatedMins: Math.max(3, Math.round(roadKm * 3.5)),
+                    isWithinRadius: distKm <= radius
+                  }
+                };
+              }).filter(p => p.distance.straightLineKm <= radius);
+            }
+
+            // Apply Client-Side Checkbox Filters
+            if(verified){
+              properties = properties.filter(p => p.verification && p.verification.isVerified);
+            }
+            if(depositCap){
+              properties = properties.filter(p => p.depositMonths <= 1);
+            }
+            if(mealsOnly){
+              properties = properties.filter(p => p.foodIncluded === true);
+            }
+
+            // Sort Properties
+            if(sortVal === 'distance-asc'){
+              properties.sort((a,b) => (a.distance ? a.distance.straightLineKm : 0) - (b.distance ? b.distance.straightLineKm : 0));
+            } else if(sortVal === 'price-asc'){
+              properties.sort((a,b) => a.monthlyRent - b.monthlyRent);
+            } else if(sortVal === 'price-desc'){
+              properties.sort((a,b) => b.monthlyRent - a.monthlyRent);
+            } else if(sortVal === 'top-rated'){
+              properties.sort((a,b) => (b.rating || 0) - (a.rating || 0));
+            }
+
+            // Update Counts
+            if(countBadge){
+              countBadge.innerHTML = 'Showing <strong class="text-on-surface">' + properties.length + '</strong> verified stays within <strong>' + radius + ' km</strong>';
+            }
+
+            // Clear old map property markers
+            if(leafletMap){
+              propertyMarkers.forEach(m => leafletMap.removeLayer(m));
+              propertyMarkers = [];
+            }
+
+            // Render Cards & Map Pins
+            if(!cardsContainer) return;
+            cardsContainer.innerHTML = '';
+
+            if(properties.length === 0){
+              if(emptyState) emptyState.classList.remove('hidden');
+              return;
+            } else if(emptyState){
+              emptyState.classList.add('hidden');
+            }
+
+            properties.forEach(p => {
+              // 1. Map Marker
+              if(leafletMap){
+                const priceShort = '₹' + (p.monthlyRent >= 1000 ? (p.monthlyRent/1000).toFixed(1).replace('.0','') + 'k' : p.monthlyRent);
+                const markerIcon = L.divIcon({
+                  className: 'custom-leaflet-pin',
+                  html: '<div class="price-marker-pin" id="pin-' + p.id + '">' + priceShort + '</div>',
+                  iconSize: [48, 24],
+                  iconAnchor: [24, 12]
+                });
+
+                const marker = L.marker([p.coordinates.lat, p.coordinates.lng], { icon: markerIcon }).addTo(leafletMap);
+                
+                const popupContent = '<div style="font-family:Inter,sans-serif;padding:4px;min-width:200px">' +
+                  '<img src="' + p.imageUrl + '" style="width:100%;height:110px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>' +
+                  '<div style="font-weight:700;font-size:13px;color:var(--color-text-primary)">' + p.title + '</div>' +
+                  '<div style="font-size:11px;color:var(--color-primary);font-weight:700;margin:2px 0">' + p.address.locality + ' • ₹' + p.monthlyRent.toLocaleString('en-IN') + '/mo</div>' +
+                  '<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">📍 ' + (p.distance ? p.distance.straightLineKm + ' km direct' : '') + '</div>' +
+                  '<button onclick="go(\'property-details\')" style="width:100%;padding:6px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">Inspect Verified Stay</button>' +
+                '</div>';
+
+                marker.bindPopup(popupContent);
+                marker.on('click', () => {
+                  const el = document.getElementById('card-' + p.id);
+                  if(el){
+                    document.querySelectorAll('.active-card-highlight').forEach(c => c.classList.remove('active-card-highlight'));
+                    el.classList.add('active-card-highlight');
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                });
+                propertyMarkers.push(marker);
+              }
+
+              // 2. Listing Card
+              const card = document.createElement('article');
+              card.id = 'card-' + p.id;
+              card.className = 'bg-surface-container-lowest border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all flex flex-col group';
+
+              const distKm = p.distance ? p.distance.straightLineKm : 0;
+              const roadKm = p.distance ? p.distance.estimatedRoadKm : 0;
+              const mins = p.distance ? p.distance.estimatedMins : 0;
+              const nearestLandmark = (p.nearbyLandmarks && p.nearbyLandmarks[0]) ? p.nearbyLandmarks[0] : null;
+
+              const freshness = p.availability && p.availability.isStale
+                ? '<span class="inline-flex items-center gap-1 text-[11px] text-error font-semibold"><span class="material-symbols-outlined text-[13px]">warning</span> Unconfirmed Availability</span>'
+                : '<span class="inline-flex items-center gap-1 text-[11px] text-tertiary font-semibold"><span class="material-symbols-outlined text-[13px]">check_circle</span> Availability Confirmed</span>';
+
+              card.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-12 gap-0">' +
+                '<div class="sm:col-span-5 relative h-48 sm:h-full min-h-[180px] overflow-hidden bg-surface-container">' +
+                  '<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="' + p.imageUrl + '" alt="' + p.title + '"/>' +
+                  '<div class="absolute top-2.5 left-2.5 flex flex-col gap-1">' +
+                    '<span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur text-primary text-[10px] font-bold">0% Brokerage</span>' +
+                    '<span class="px-2 py-0.5 rounded bg-secondary/90 text-on-secondary text-[10px] font-semibold">1-Mo Deposit</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="sm:col-span-7 p-4 flex flex-col justify-between">' +
+                  '<div>' +
+                    '<div class="flex items-center justify-between mb-1">' +
+                      '<span class="text-[11px] font-bold text-secondary uppercase tracking-wider">' + (p.categoryLabel || p.propertyType) + '</span>' +
+                      '<div class="flex items-center gap-1 text-xs text-on-surface">' +
+                        '<span class="material-symbols-outlined text-[13px] text-primary fill-1">star</span>' +
+                        '<span class="font-bold">' + (p.rating || 4.8) + '</span>' +
+                      '</div>' +
+                    '</div>' +
+                    '<h3 class="font-headline font-bold text-base text-on-surface hover:text-primary transition-colors line-clamp-1 cursor-pointer" onclick="go(\'property-details\')">' +
+                      p.title +
+                    '</h3>' +
+                    '<p class="text-xs text-on-surface-variant mt-0.5 mb-2">📍 ' + p.address.locality + ', ' + p.address.city + '</p>' +
+                    
+                    // Location Intelligence Distance Bar
+                    '<div class="p-2 rounded-lg bg-surface-container-low border border-border-subtle text-[11px] space-y-1 mb-2.5">' +
+                      '<div class="flex items-center justify-between">' +
+                        '<span class="text-on-surface font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-[13px] text-primary">near_me</span> ' + distKm + ' km direct</span>' +
+                        '<span class="text-outline">🚗 ~' + roadKm + ' km (~' + mins + ' mins drive)</span>' +
+                      '</div>' +
+                      (nearestLandmark ? '<div class="text-[11px] text-primary font-medium">🎓 ' + nearestLandmark.distanceKm + ' km from ' + nearestLandmark.name + '</div>' : '') +
+                    '</div>' +
+                    
+                    freshness +
+                  '</div>' +
+                  
+                  '<div class="pt-3 border-t border-border-subtle mt-2 flex items-center justify-between">' +
+                    '<div>' +
+                      '<span class="font-headline font-extrabold text-lg text-primary">₹' + p.monthlyRent.toLocaleString('en-IN') + '</span>' +
+                      '<span class="text-[11px] text-outline">/mo</span>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-1.5">' +
+                      '<button onclick="showVisitModal(\'' + p.title + '\')" class="py-1.5 px-3 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold cursor-pointer">Visit</button>' +
+                      '<button onclick="showTokenModal(\'' + p.title + '\',\'₹' + p.monthlyRent.toLocaleString('en-IN') + '\')" class="py-1.5 px-3 rounded-lg bg-primary hover:bg-yellow-400 text-on-primary text-xs font-bold shadow-sm cursor-pointer">Reserve ₹999</button>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+
+              cardsContainer.appendChild(card);
+            });
+          };
+
+          window.executeSearchQuery = executeSearchQuery;
+
+          // Wire view mode buttons (Split, List, Map)
+          const btnSplit = document.getElementById('view-split-btn');
+          const btnList = document.getElementById('view-list-btn');
+          const btnMap = document.getElementById('view-map-btn');
+          const listCol = document.getElementById('listings-column');
+          const mapCol = document.getElementById('map-column');
+
+          if(btnSplit && btnList && btnMap && listCol && mapCol){
+            btnSplit.addEventListener('click', () => {
+              listCol.className = 'lg:col-span-6 space-y-4';
+              mapCol.className = 'lg:col-span-6 lg:sticky lg:top-24 h-[650px]';
+              mapCol.classList.remove('hidden');
+              listCol.classList.remove('hidden');
+              btnSplit.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold bg-primary text-on-primary';
+              btnList.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+              btnMap.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+              if(leafletMap) setTimeout(() => leafletMap.invalidateSize(), 150);
+            });
+            btnList.addEventListener('click', () => {
+              listCol.className = 'lg:col-span-12 space-y-4';
+              mapCol.classList.add('hidden');
+              listCol.classList.remove('hidden');
+              btnList.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold bg-primary text-on-primary';
+              btnSplit.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+              btnMap.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+            });
+            btnMap.addEventListener('click', () => {
+              mapCol.className = 'lg:col-span-12 h-[720px]';
+              mapCol.classList.remove('hidden');
+              listCol.classList.add('hidden');
+              btnMap.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold bg-primary text-on-primary';
+              btnSplit.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+              btnList.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary';
+              if(leafletMap) setTimeout(() => leafletMap.invalidateSize(), 150);
+            });
+          }
+
+          // Wire Search Controls & Autocomplete
+          if(searchInputField){
+            searchInputField.value = window.roomly.state.search.loc || 'Jagatpura, Jaipur';
+            const autoBox = document.getElementById('search-autocomplete-box');
+            searchInputField.addEventListener('input', function(){
+              const q = this.value.trim().toLowerCase();
+              if(!autoBox) return;
+              if(q.length < 2){
+                autoBox.classList.add('hidden');
+                return;
+              }
+              const list = (window.RAJASTHAN_LOCALITIES || []).filter(l => l.name.toLowerCase().includes(q) || l.landmarks.some(lm => lm.toLowerCase().includes(q)));
+              let html = '';
+              list.slice(0, 5).forEach(loc => {
+                html += '<div class="p-2.5 border-b border-border-subtle cursor-pointer hover:bg-surface-container transition-colors text-xs" onclick="selectLocality(\'' + loc.name + '\', ' + loc.lat + ', ' + loc.lng + ')">' +
+                  '<strong>' + loc.name + '</strong> <span class="text-primary text-[10px]">(' + loc.type + ')</span>' +
+                '</div>';
+              });
+              autoBox.innerHTML = html;
+              autoBox.classList.remove('hidden');
+            });
+          }
+
+          const btnGpsSearch = document.getElementById('search-gps-btn');
+          if(btnGpsSearch){
+            btnGpsSearch.addEventListener('click', () => {
+              window.roomly.requestUserLocation(
+                (pos) => {
+                  showToast('GPS Location acquired: ' + pos.lat.toFixed(4) + ', ' + pos.lng.toFixed(4), 's', 'gps_fixed');
+                  executeSearchQuery();
+                },
+                (err) => {
+                  showToast('GPS unavailable. Please choose from Jaipur localities.', 'e', 'location_off');
+                  window.showLocalityPickerModal();
+                }
+              );
+            });
+          }
+
+          if(searchRadiusField){
+            searchRadiusField.value = String(window.roomly.state.search.radiusKm || 10);
+            searchRadiusField.addEventListener('change', function(){
+              window.roomly.state.search.radiusKm = parseFloat(this.value);
+              executeSearchQuery();
+            });
+          }
+
+          if(sortSelector){
+            sortSelector.addEventListener('change', executeSearchQuery);
+          }
+
+          // Reset Location button
+          const btnResetLoc = document.getElementById('btn-reset-location');
+          if(btnResetLoc){
+            btnResetLoc.addEventListener('click', () => {
+              window.selectLocality('Jagatpura', 26.8242, 75.8644);
+            });
+          }
+
+          // Expand radius button on empty state
+          const btnExpand = document.getElementById('btn-expand-radius');
+          if(btnExpand){
+            btnExpand.addEventListener('click', () => {
+              window.roomly.state.search.radiusKm = 20;
+              if(searchRadiusField) searchRadiusField.value = '20';
+              executeSearchQuery();
+              showToast('Search radius expanded to 20 km (Greater Jaipur)', 'i', 'radar');
+            });
+          }
+
+          // Sidebar Checkbox & Button Filters
+          document.querySelectorAll('#filter-verified-only, #filter-deposit-cap, #filter-meals-included').forEach(chk => {
+            chk.addEventListener('change', executeSearchQuery);
+          });
+
+          document.querySelectorAll('.aud-btn').forEach(btn => {
+            btn.addEventListener('click', function(){
+              document.querySelectorAll('.aud-btn').forEach(b => {
+                b.className = 'aud-btn py-1.5 rounded-lg text-xs font-medium bg-surface-container-low text-on-surface-variant hover:text-primary cursor-pointer';
+              });
+              this.className = 'aud-btn active py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary cursor-pointer';
+              window.roomly.state.search.audience = this.dataset.val;
+              executeSearchQuery();
+            });
+          });
+
+          // Initialize Map & Run Query
+          setTimeout(() => {
+            initMap();
+            executeSearchQuery();
+          }, 60);
+        }
+
+        // 5. Property Details Dynamic Configuration & Pricing (UX-03 Fix)
+        if(path === 'property-details'){
+          const btnSingle = document.getElementById('btn-cfg-single');
+          const btnTwin = document.getElementById('btn-cfg-twin');
+          const rentDisplay = document.getElementById('summary-rent');
+          const depositDisplay = document.getElementById('summary-deposit');
+          const totalDisplay = document.getElementById('summary-total');
+
+          if(btnSingle && btnTwin){
+            btnSingle.addEventListener('click', () => {
+              btnSingle.className = 'py-1.5 rounded-md bg-surface-container-lowest text-primary font-bold shadow-sm';
+              btnTwin.className = 'py-1.5 rounded-md text-on-surface-variant hover:text-on-surface';
+              if(rentDisplay) rentDisplay.textContent = '₹11,000';
+              if(depositDisplay) depositDisplay.textContent = '₹11,000';
+              if(totalDisplay) totalDisplay.textContent = '₹22,000';
+              showToast('Switched to Private Single Room (₹11,000/mo)', 'i', 'single_bed');
+            });
+
+            btnTwin.addEventListener('click', () => {
+              btnTwin.className = 'py-1.5 rounded-md bg-surface-container-lowest text-primary font-bold shadow-sm';
+              btnSingle.className = 'py-1.5 rounded-md text-on-surface-variant hover:text-on-surface';
+              if(rentDisplay) rentDisplay.textContent = '₹8,500';
+              if(depositDisplay) depositDisplay.textContent = '₹8,500';
+              if(totalDisplay) totalDisplay.textContent = '₹17,000';
+              showToast('Switched to Twin Sharing Room (₹8,500/mo)', 'i', 'group');
+            });
+          }
+        }
+
+        // 6. Property Listing Wizard Submissions
+        if(path === 'post-free-property'){
+          document.querySelectorAll('button').forEach(btn => {
+            if(btn.textContent.includes('Continue to Photos') || btn.textContent.includes('Submit Listing')){
+              btn.addEventListener('click', () => {
+                const nameInput = document.querySelector('input[placeholder*="Residency"]') || document.querySelector('input[type="text"]');
+                const propName = nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Greenwood Luxury Residency';
+                const newListing = {
+                  id: 'FMH-USR-' + Date.now(),
+                  title: propName,
+                  city: 'Jaipur',
+                  locality: 'Jagatpura',
+                  rent: '₹8,500',
+                  category: 'Managed Co-Living / PG',
+                  coordinates: { lat: 26.8242, lng: 75.8644 },
+                  depositMonths: 1,
+                  verification: { isVerified: true, physicalInspectionDate: new Date().toISOString() }
+                };
+                window.roomly.saveListing(newListing);
+                showToast('Property listing saved & queued for Jaipur auditor inspection!', 's', 'check_circle');
+                setTimeout(() => {
+                  showModal('<div style="font-family:Inter,sans-serif;text-align:center;padding:1.5rem 1rem">' +
+                    '<div style="width:60px;height:60px;background:var(--color-tertiary-surface);color:var(--color-success);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">' +
+                      '<span class="material-symbols-outlined" style="font-size:36px">verified</span>' +
+                    '</div>' +
+                    '<h3 style="font-family:Manrope,sans-serif;font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:.5rem">Listing Published in Jaipur!</h3>' +
+                    '<p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1.5rem">Your listing <strong style="color:var(--color-primary)">' + propName + '</strong> is live with 0% brokerage.</p>' +
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">' +
+                      '<button onclick="closeModal();go(\'search-rentals\')" style="padding:12px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">View in Search Map</button>' +
+                      '<button onclick="closeModal();go(\'owner-overview\')" style="padding:12px;background:var(--color-surface-elevated);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">Go to Host Suite</button>' +
+                    '</div>' +
+                  '</div>');
+                }, 250);
+              });
+            }
+          });
+        }
+
+        // 7. Host Suite Availability Confirmation (Quality & Trust pillar)
+        if(path === 'owner-overview'){
+          // Add reconfirm button handler
+          document.querySelectorAll('button').forEach(btn => {
+            if(btn.textContent.includes('Reconfirm') || btn.textContent.includes('Confirm Availability')){
+              btn.addEventListener('click', async () => {
+                showToast('Availability confirmed! Listing refreshed as active today.', 's', 'verified');
+              });
+            }
+          });
+        }
+
+        // 8. Wishlist Toggle
+        document.querySelectorAll('[title="Save to Shortlist"], [title="Save to Wishlist"]').forEach(btn => {
+          if(btn._w) return;
+          btn._w = true;
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            const ic = this.querySelector('.material-symbols-outlined');
+            if(!ic) return;
+            const sv = this.dataset.saved === 'true';
+            if(sv){
+              ic.style.fontVariationSettings = "'FILL' 0";
+              ic.classList.remove('text-error');
+              this.dataset.saved = 'false';
+              showToast('Removed from shortlist', 'i', 'favorite');
+            } else {
+              ic.style.fontVariationSettings = "'FILL' 1";
+              ic.classList.add('text-error');
+              this.dataset.saved = 'true';
+              showToast('Saved to your Rajasthan shortlist!', 's', 'favorite');
+            }
+          });
+        });
+
+      } catch(err) {
+        console.warn('initScripts non-critical error:', err);
+      }
+    }
+
+    function hlNav(path){
+      document.querySelectorAll('nav a[data-path], header a[data-path]').forEach(a => {
+        const lp = a.dataset.path;
+        const active = lp === path || (path === 'search-rentals' && (lp === 'co-living-and-pgs' || lp === 'flats-and-rooms'));
+        if(active){
+          a.classList.add('text-primary', 'font-semibold');
+          a.classList.remove('text-on-surface-variant');
+          a.setAttribute('aria-current', 'page');
+        } else {
+          a.classList.remove('text-primary', 'font-semibold');
+          a.classList.add('text-on-surface-variant');
+          a.removeAttribute('aria-current');
+        }
+      });
+    }
+
+    document.addEventListener('click', e => {
+      const link = e.target.closest('[data-path]');
+      if(!link) return;
+      const p = link.dataset.path;
+      if(!p || p === cur) return;
+
+      // Host Security Protection (SEC-02)
+      if(p === 'owner-overview' && !window.roomly.state.isHostAuthed){
+        e.preventDefault();
+        promptHostAuth(() => go('owner-overview'));
+        return;
+      }
+
+      if(ROUTES[p]){
+        e.preventDefault();
+        go(p);
+      }
+    });
+
+    async function go(target, push){
+      let path = target;
+      let queryStr = '';
+      if(target.includes('?')){
+        const parts = target.split('?');
+        path = parts[0];
+        queryStr = parts[1];
+        const params = new URLSearchParams(queryStr);
+        if(params.has('loc')) window.roomly.state.search.loc = decodeURIComponent(params.get('loc'));
+        if(params.has('budget')) window.roomly.state.search.budget = params.get('budget');
+        if(params.has('lat')) window.roomly.state.search.lat = parseFloat(params.get('lat'));
+        if(params.has('lng')) window.roomly.state.search.lng = parseFloat(params.get('lng'));
+        if(params.has('rad')) window.roomly.state.search.radiusKm = parseFloat(params.get('rad'));
+        if(params.has('type')) window.roomly.state.search.type = params.get('type');
+        if(params.has('audience')) window.roomly.state.search.audience = params.get('audience');
+        if(params.has('view')) window.roomly.state.search.viewMode = params.get('view');
+      }
+
+      if(nav || (path === cur && !queryStr)) return;
+      push = push !== false;
+      nav = true;
+      showL();
+      const root = document.getElementById('app-root');
+      root.classList.add('page-out');
+      await new Promise(r => setTimeout(r, 200));
+      root.classList.remove('page-out');
+      root.innerHTML = '';
+
+      try {
+        let rawHtml = '';
+        if(window.INLINE_PAGES && window.INLINE_PAGES[path]){
+          rawHtml = window.INLINE_PAGES[path];
+        } else {
+          const url = ROUTES[path] || ROUTES['explore-rentals'];
+          const res = await fetch(url + '?_=' + Date.now());
+          if(!res.ok) throw new Error('Failed to fetch route: HTTP ' + res.status);
+          rawHtml = await res.text();
+        }
+        const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
+        root.innerHTML = doc.body && doc.body.innerHTML ? doc.body.innerHTML : rawHtml;
+        root.classList.add('page-in');
+        setTimeout(() => root.classList.remove('page-in'), 250);
+        if(push) history.pushState({path, target}, '', '#' + target);
+        document.title = TITLES[path] || 'ROOMLY';
+        cur = path;
+        window.scrollTo({top: 0, behavior: 'smooth'});
+        hideL();
+        try {
+          initScripts(path);
+        } catch(scriptErr) {
+          console.warn('initScripts non-critical warning:', scriptErr);
+        }
+      } catch(err) {
+        console.error('Page load error:', err);
+        let guidance = '';
+        if(window.location.protocol === 'file:'){
+          guidance = '<div style="margin-top:1rem;padding:1rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;max-width:520px;text-align:left;font-size:13px;line-height:1.6">' +
+            '<div style="font-weight:700;color:var(--color-primary);margin-bottom:.5rem">Opened directly via file:// in browser?</div>' +
+            '<div>Browsers block <code>fetch()</code> requests on <code>file:///</code> URLs due to security policies.</div>' +
+            '<div style="margin-top:.5rem"><strong>Please open using the local server URL:</strong></div>' +
+            '<div style="margin-top:6px"><a href="http://localhost:8000/index.html" style="color:var(--color-primary);font-weight:700;text-decoration:underline">http://localhost:8000/index.html</a></div>' +
+          '</div>';
+        }
+        root.innerHTML = '<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;padding:2rem;text-align:center;">' +
+          '<span class="material-symbols-outlined" style="font-size:48px;color:var(--color-primary)">error</span>' +
+          '<div style="font-family:Manrope,sans-serif;font-size:22px;font-weight:700;color:var(--color-text-primary)">Unable to load page view</div>' +
+          '<div style="font-size:13px;color:var(--color-text-secondary);max-width:400px">' + err.message + '</div>' +
+          guidance +
+          '<button onclick="go(\'explore-rentals\')" style="padding:12px 28px;background:var(--color-button-primary);color:var(--color-button-primary-text);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Retry Loading Discovery</button>' +
+        '</div>';
+        hideL();
+      } finally {
+        nav = false;
+      }
+    }
+
+    window.addEventListener('popstate', e => {
+      const p = e.state && e.state.target ? e.state.target : 'explore-rentals';
+      go(p, false);
+    });
+
+    window.go = go;
+    const initialHash = window.location.hash.replace('#', '') || 'explore-rentals';
+    go(initialHash, false);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Find My Home - Rajasthan & Jaipur Location-First Map Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="../tokens.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+        font-family: 'Inter', sans-serif;
+      }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { display: none; }
+    ::selection { background: var(--color-primary); color: var(--color-on-primary); }
+    header { border-bottom: 1px solid var(--color-border-subtle); }
+    button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    #interactive-map { height: 100%; min-height: 480px; border-radius: 1rem; z-index: 10; }
+
+    /* ── Form Controls & Native Select Contrast Shield ── */
+    select, input, textarea { color-scheme: dark; }
+    html:not(.dark) select, html:not(.dark) input, html:not(.dark) textarea,
+    [data-theme="light"] select, [data-theme="light"] input, [data-theme="light"] textarea { color-scheme: light; }
+    select option {
+      background-color: #141722 !important;
+      color: #F4F5F8 !important;
+    }
+    html:not(.dark) select option,
+    [data-theme="light"] select option {
+      background-color: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+    .leaflet-popup-content-wrapper { background: var(--color-surface-container-lowest); color: var(--color-text-primary); border-radius: 12px; border: 1px solid var(--color-border); }
+    .leaflet-popup-tip { background: var(--color-surface-container-lowest); }
+    .price-marker-pin {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      font-weight: 700;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform .15s ease;
+    }
+    .price-marker-pin:hover { transform: scale(1.15); z-index: 999; }
+    .active-card-highlight { border-color: var(--color-primary) !important; box-shadow: 0 0 0 2px var(--color-primary) !important; }
+
+    /* ── Entrance animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.4s ease both; }
+    .fade-up-1 { animation-delay: 0.05s; }
+    .fade-up-2 { animation-delay: 0.12s; }
+
+    /* ── Listing card hover lift ── */
+    .result-card {
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.15s ease;
+    }
+    .result-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 32px rgba(0,0,0,0.16);
+    }
+
+    /* ── Skeleton loading shimmer ── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg,
+        var(--color-surface-container-low) 25%,
+        var(--color-surface-container) 50%,
+        var(--color-surface-container-low) 75%
+      );
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px;
+    }
+
+    /* ── Filter sidebar active states ── */
+    .budget-pill-btn.active {
+      background: var(--color-primary) !important;
+      color: var(--color-on-primary) !important;
+      font-weight: 700;
+    }
+    .budget-pill-btn { transition: all 0.15s ease; }
+    .budget-pill-btn:hover { transform: scale(1.04); }
+
+    /* ── Mobile filter FAB ── */
+    #mobile-filter-fab {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 60;
+      display: none;
+      align-items: center; gap: 6px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: var(--color-surface-container-highest);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      font-size: 12px; font-weight: 700;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #mobile-filter-fab:hover { transform: translateX(-50%) translateY(-2px); }
+    @media (max-width: 1023px) {
+      #mobile-filter-fab { display: flex; }
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+  <!-- Top Navigation Header -->
+  <header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-b border-border-subtle">
+    <div class="h-20 max-w-[1360px] mx-auto px-6 md:px-8 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6">
+        <a class="flex items-center gap-2.5" data-path="explore-rentals" href="#explore-rentals">
+          <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary font-headline font-bold text-lg shadow-sm">
+            <span class="material-symbols-outlined text-[22px]">home_pin</span>
+          </div>
+          <div>
+            <span class="font-headline font-bold text-xl tracking-tight text-on-surface block leading-none">Find My Home</span>
+            <span class="text-[10px] font-semibold text-primary uppercase tracking-wider block mt-0.5">Rajasthan</span>
+          </div>
+        </a>
+        <!-- Header Custom Locality Dropdown (Zero OS Popup Contrast Bug) -->
+        <div class="custom-dropdown relative hidden sm:block" id="search-locality-dropdown">
+          <button type="button" class="custom-dropdown-trigger flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg border border-border-subtle hover:border-primary text-xs font-semibold text-on-surface transition-colors cursor-pointer" id="search-locality-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="material-symbols-outlined text-[18px] text-primary">location_on</span>
+            <span class="dd-label" id="search-locality-label">Jaipur (All Regions)</span>
+            <span class="material-symbols-outlined text-[16px] text-on-surface-variant dd-chevron transition-transform duration-200">expand_more</span>
+          </button>
+          <div class="custom-dropdown-menu absolute top-[calc(100%+6px)] left-0 min-w-[240px] bg-surface-elevated border border-border rounded-xl shadow-2xl py-1.5 z-[200] hidden" id="search-locality-menu" role="listbox">
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors selected text-primary font-bold" data-value="Jaipur" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot"></span>
+              <span>Jaipur (All Regions)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Jagatpura" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Jagatpura</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Malviya Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Malviya Nagar</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Mansarovar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Mansarovar</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Vaishali Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Vaishali Nagar</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Sitapura Industrial Area" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Sitapura & Tonk Rd</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Pratap Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Pratap Nagar</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Ajmer Road (Mahindra SEZ & Manipal)" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Ajmer Road (Manipal)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Kukas & Delhi Road" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Kukas (Arya & Amity)</span>
+            </div>
+          </div>
+          <select id="search-city-nav-select" class="sr-only" aria-hidden="true" tabindex="-1">
+            <option value="Jaipur">Jaipur (All Regions)</option>
+            <option value="Jagatpura">Jagatpura</option>
+            <option value="Malviya Nagar">Malviya Nagar</option>
+            <option value="Mansarovar">Mansarovar</option>
+            <option value="Vaishali Nagar">Vaishali Nagar</option>
+            <option value="Sitapura Industrial Area">Sitapura & Tonk Rd</option>
+            <option value="Pratap Nagar">Pratap Nagar</option>
+            <option value="Ajmer Road (Mahindra SEZ & Manipal)">Ajmer Road (Manipal)</option>
+            <option value="Kukas & Delhi Road">Kukas (Arya & Amity)</option>
+          </select>
+        </div>
+      </div>
+      <nav class="hidden lg:flex items-center gap-6 text-sm" data-active-classes="text-primary font-semibold">
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="explore-rentals" href="#explore-rentals">Explore Stays</a>
+        <a class="text-primary font-semibold transition-colors" data-path="search-rentals" href="#search-rentals">Map & Search</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="property-details" href="#property-details">Featured Stay</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="post-free-property" href="#post-free-property">Post Free Property</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex items-center bg-surface-container-high p-1 rounded-full text-xs">
+          <a class="px-3 py-1.5 rounded-full bg-primary text-on-primary font-semibold shadow-sm transition-all" data-path="explore-rentals" href="#explore-rentals">Tenant</a>
+          <a class="px-3 py-1.5 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="owner-overview" href="#owner-overview">Host Suite</a>
+        </div>
+        <a class="px-4 py-2 rounded-xl bg-primary text-on-primary font-semibold text-xs hover:bg-yellow-400 transition-all shadow-sm" data-path="post-free-property" href="#post-free-property">
+          + List Room
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full pt-20 bg-surface">
+    <div class="max-w-[1360px] mx-auto px-4 md:px-8 pt-4 pb-16">
+      
+      <!-- Top Geolocation & Search Control Bar -->
+      <div class="bg-surface-container-lowest border border-border rounded-2xl p-4 shadow-sm mb-6 fade-up fade-up-1">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          
+          <!-- Location Input with Live Autocomplete -->
+          <div class="md:col-span-5 relative">
+            <div class="flex items-center bg-surface-container-low border border-border rounded-xl px-3 py-2">
+              <span class="material-symbols-outlined text-[18px] text-primary mr-2 shrink-0">search</span>
+              <input id="search-input-field" autocomplete="off" class="w-full bg-transparent text-xs font-semibold text-on-surface placeholder:text-outline focus:outline-none" placeholder="Search locality, landmark or college in Jaipur..." type="text" value="Jagatpura, Jaipur"/>
+              <button id="search-gps-btn" class="text-primary hover:text-primary-hover p-1 rounded cursor-pointer shrink-0 ml-1" title="Use My Current Location (requests browser permission on click)" type="button">
+                <span class="material-symbols-outlined text-[18px]">my_location</span>
+              </button>
+            </div>
+            <!-- Autocomplete list -->
+            <div id="search-autocomplete-box" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-surface-container-lowest border border-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto"></div>
+          </div>
+
+          <!-- Radius Selector -->
+          <div class="md:col-span-2">
+            <div class="flex items-center bg-surface-container-low border border-border rounded-xl px-3 py-2">
+              <span class="material-symbols-outlined text-[16px] text-secondary mr-1.5 shrink-0">radar</span>
+              <select id="search-radius-field" class="w-full bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer">
+                <option value="1">Radius: 1 km</option>
+                <option value="3">Radius: 3 km</option>
+                <option value="5">Radius: 5 km</option>
+                <option value="10" selected>Radius: 10 km</option>
+                <option value="20">Radius: 20 km</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sort Dropdown -->
+          <div class="md:col-span-3">
+            <div class="flex items-center bg-surface-container-low border border-border rounded-xl px-3 py-2">
+              <span class="material-symbols-outlined text-[16px] text-outline mr-1.5 shrink-0">swap_vert</span>
+              <select id="sort-selector" class="w-full bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer">
+                <option value="distance-asc">Distance: Nearest First</option>
+                <option value="price-asc">Rent: Low to High</option>
+                <option value="price-desc">Rent: High to Low</option>
+                <option value="top-rated">Top Rated (4.8+)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- View Mode Toggle (Split / List / Map) -->
+          <div class="md:col-span-2 flex items-center justify-end gap-1.5">
+            <div class="inline-flex p-1 bg-surface-container-low rounded-xl border border-border-subtle w-full justify-center">
+              <button id="view-split-btn" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold bg-primary text-on-primary transition-all flex items-center justify-center gap-1 cursor-pointer" title="Split List & Map">
+                <span class="material-symbols-outlined text-[15px]">view_column</span>
+                <span class="hidden sm:inline">Split</span>
+              </button>
+              <button id="view-list-btn" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary transition-all flex items-center justify-center gap-1 cursor-pointer" title="List View Only">
+                <span class="material-symbols-outlined text-[15px]">view_list</span>
+                <span class="hidden sm:inline">List</span>
+              </button>
+              <button id="view-map-btn" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:text-primary transition-all flex items-center justify-center gap-1 cursor-pointer" title="Map View Only">
+                <span class="material-symbols-outlined text-[15px]">map</span>
+                <span class="hidden sm:inline">Map</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Context Strip & Geodesic Anchor -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-border-subtle text-xs">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-outline font-semibold uppercase text-[10px]">Anchor Point:</span>
+            <span id="active-anchor-badge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-primary/10 text-primary font-bold text-xs">
+              <span class="material-symbols-outlined text-[13px]">location_on</span> Jagatpura Center (26.8242, 75.8644)
+            </span>
+            <span id="active-radius-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/10 text-secondary font-semibold text-xs">
+              Radius: 10 km
+            </span>
+            <button id="btn-reset-location" class="text-xs text-outline hover:text-error hover:underline ml-1 cursor-pointer" type="button">Reset</button>
+          </div>
+          <div id="results-count-badge" class="text-xs text-on-surface-variant font-medium">
+            Showing <strong class="text-on-surface">6</strong> verified stays in Rajasthan
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout: Sidebar Filters + [List Cards & Interactive Map] -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Filter Sidebar (3 cols on lg) -->
+        <aside class="lg:col-span-3 bg-surface-container-lowest border border-border rounded-2xl p-5 shadow-sm space-y-5 lg:sticky lg:top-24 fade-up fade-up-2">
+          <div class="flex items-center justify-between pb-3 border-b border-border-subtle">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">tune</span>
+              <span class="font-headline font-bold text-base text-on-surface">Filter Stays</span>
+            </div>
+            <button id="btn-sidebar-reset" class="text-xs text-error hover:underline cursor-pointer" type="button">Reset</button>
+          </div>
+
+          <!-- Quick Fast Toggles -->
+          <div class="space-y-2.5 bg-surface-container-low p-3 rounded-xl border border-border-subtle">
+            <label class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary text-[17px]">verified</span>
+                <span class="text-xs font-medium text-on-surface">Verified Stays Only</span>
+              </div>
+              <input id="filter-verified-only" checked="" class="w-4 h-4 accent-primary cursor-pointer rounded" type="checkbox"/>
+            </label>
+            <div class="h-px bg-border-subtle"></div>
+            <label class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[17px]">shield</span>
+                <span class="text-xs font-medium text-on-surface">1-Mo Deposit Cap</span>
+              </div>
+              <input id="filter-deposit-cap" checked="" class="w-4 h-4 accent-primary cursor-pointer rounded" type="checkbox"/>
+            </label>
+            <div class="h-px bg-border-subtle"></div>
+            <label class="flex items-center justify-between cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-[17px]">restaurant</span>
+                <span class="text-xs font-medium text-on-surface">Meals / Food Included</span>
+              </div>
+              <input id="filter-meals-included" class="w-4 h-4 accent-primary cursor-pointer rounded" type="checkbox"/>
+            </label>
+          </div>
+
+          <!-- Persona Focus -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-on-surface block">Audience Focus</span>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button id="filter-aud-all" class="aud-btn active py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary transition-all cursor-pointer" data-val="all">All Stays</button>
+              <button id="filter-aud-student" class="aud-btn py-1.5 rounded-lg text-xs font-medium bg-surface-container-low text-on-surface-variant hover:text-primary transition-all cursor-pointer" data-val="student">🎓 Student</button>
+              <button id="filter-aud-pro" class="aud-btn py-1.5 rounded-lg text-xs font-medium bg-surface-container-low text-on-surface-variant hover:text-primary transition-all col-span-2 cursor-pointer" data-val="professional">💼 Professional / Corporate</button>
+            </div>
+          </div>
+
+          <!-- Property Category Filter -->
+          <div class="space-y-2 pt-2 border-t border-border-subtle">
+            <span class="text-xs font-bold text-on-surface block">Property Type</span>
+            <div class="space-y-1.5 text-xs">
+              <label class="flex items-center justify-between cursor-pointer text-on-surface-variant hover:text-primary">
+                <div class="flex items-center gap-2">
+                  <input class="w-3.5 h-3.5 accent-primary rounded prop-type-checkbox" data-type="pg" checked="" type="checkbox"/>
+                  <span>Co-Living / Managed PG</span>
+                </div>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer text-on-surface-variant hover:text-primary">
+                <div class="flex items-center gap-2">
+                  <input class="w-3.5 h-3.5 accent-primary rounded prop-type-checkbox" data-type="shared_room" checked="" type="checkbox"/>
+                  <span>Shared Rooms (Twin/Triple)</span>
+                </div>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer text-on-surface-variant hover:text-primary">
+                <div class="flex items-center gap-2">
+                  <input class="w-3.5 h-3.5 accent-primary rounded prop-type-checkbox" data-type="private_room" checked="" type="checkbox"/>
+                  <span>Private Studio / 1 RK</span>
+                </div>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer text-on-surface-variant hover:text-primary">
+                <div class="flex items-center gap-2">
+                  <input class="w-3.5 h-3.5 accent-primary rounded prop-type-checkbox" data-type="flat" checked="" type="checkbox"/>
+                  <span>Flats (1, 2, 3 BHK)</span>
+                </div>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer text-on-surface-variant hover:text-primary">
+                <div class="flex items-center gap-2">
+                  <input class="w-3.5 h-3.5 accent-primary rounded prop-type-checkbox" data-type="independent_house" checked="" type="checkbox"/>
+                  <span>Independent House / Villa</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Monthly Rent Range -->
+          <div class="space-y-2 pt-2 border-t border-border-subtle">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-on-surface">Monthly Rent</span>
+              <span id="budget-range-label" class="text-primary font-bold">₹5k – ₹30k / mo</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 text-xs">
+              <button class="budget-pill-btn px-2 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-medium cursor-pointer" data-min="0" data-max="8000">&lt; ₹8,000</button>
+              <button class="budget-pill-btn px-2 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-medium cursor-pointer" data-min="8000" data-max="14000">₹8k – ₹14k</button>
+              <button class="budget-pill-btn px-2 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-medium cursor-pointer" data-min="14000" data-max="22000">₹14k – ₹22k</button>
+              <button class="budget-pill-btn px-2 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-medium cursor-pointer" data-min="22000" data-max="999999">₹22,000+</button>
+            </div>
+          </div>
+
+          <!-- Furnishing Status -->
+          <div class="space-y-2 pt-2 border-t border-border-subtle">
+            <span class="text-xs font-bold text-on-surface block">Furnishing</span>
+            <div class="grid grid-cols-3 gap-1 text-[11px]">
+              <button class="furnish-btn active py-1.5 rounded-lg font-bold bg-primary text-on-primary cursor-pointer" data-furnish="all">All</button>
+              <button class="furnish-btn py-1.5 rounded-lg font-medium bg-surface-container-low text-on-surface-variant hover:text-primary cursor-pointer" data-furnish="fully_furnished">Furnished</button>
+              <button class="furnish-btn py-1.5 rounded-lg font-medium bg-surface-container-low text-on-surface-variant hover:text-primary cursor-pointer" data-furnish="semi_furnished">Semi</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Content Area: Split View [Listings Column + Interactive Map Column] -->
+        <div class="lg:col-span-9 grid grid-cols-1 lg:grid-cols-12 gap-6" id="discovery-content-area">
+          
+          <!-- Listings Column (Default 6 cols in split view) -->
+          <section class="lg:col-span-6 space-y-4" id="listings-column">
+            
+            <!-- Cards Container -->
+            <div id="listings-cards-container" class="space-y-4">
+              <!-- Skeleton loaders (shown while data loads) -->
+              <div class="skeleton-card space-y-0" id="skeleton-cards">
+                <div class="skeleton h-36 w-full mb-2"></div>
+                <div class="skeleton h-4 w-3/4 mb-2"></div>
+                <div class="skeleton h-3 w-1/2"></div>
+              </div>
+            </div>
+
+            <!-- Empty State Container (Hidden by default) -->
+            <div id="empty-search-state" class="hidden p-10 rounded-2xl bg-surface-container-lowest border border-border text-center space-y-5">
+              <div class="w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                <span class="material-symbols-outlined text-[42px]">radar</span>
+              </div>
+              <div>
+                <h3 class="font-headline font-bold text-lg text-on-surface">No verified stays in this radius</h3>
+                <p class="text-xs text-on-surface-variant max-w-sm mx-auto mt-2 leading-relaxed">
+                  We only show genuine, geo-verified listings. Try expanding your radius or searching a different Jaipur corridor.
+                </p>
+              </div>
+              <div class="flex items-center justify-center gap-3 flex-wrap">
+                <button id="btn-expand-radius" class="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:opacity-90 active:scale-95 transition-all cursor-pointer">Expand to 20 km</button>
+                <button id="btn-reset-filters-empty" class="px-5 py-2.5 rounded-xl bg-surface-container-low border border-border text-xs font-medium text-on-surface hover:text-primary transition-colors cursor-pointer">Reset All Filters</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Interactive Leaflet Map Column (Default 6 cols in split view) -->
+          <section class="lg:col-span-6 lg:sticky lg:top-24 h-[650px]" id="map-column">
+            <div class="w-full h-full bg-surface-container-lowest border border-border rounded-2xl overflow-hidden p-2 shadow-sm flex flex-col">
+              <!-- Map Toolbar -->
+              <div class="flex items-center justify-between pb-2 px-2 text-xs border-b border-border-subtle">
+                <div class="flex items-center gap-1.5 font-bold text-on-surface">
+                  <span class="material-symbols-outlined text-[16px] text-primary">explore</span>
+                  <span>Interactive Geospatial Radius Map</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-primary"></span> Stays
+                  <span class="inline-block w-2.5 h-2.5 rounded-full bg-secondary"></span> Search Center
+                </div>
+              </div>
+              <!-- Leaflet Map Container -->
+              <div class="flex-1 w-full rounded-xl overflow-hidden relative mt-2" id="interactive-map"></div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Filter FAB (visible only on < lg screens) -->
+  <button id="mobile-filter-fab" type="button">
+    <span class="material-symbols-outlined text-[18px]">tune</span>
+    Filters &amp; Sort
+  </button>
+
+  <script>
+    // Initialize custom dropdowns if running in standalone mode
+    if (typeof initCustomDropdowns === 'function') {
+      initCustomDropdowns();
+    } else {
+      document.querySelectorAll('.custom-dropdown').forEach(dd => {
+        const trigger = dd.querySelector('.custom-dropdown-trigger');
+        const menu = dd.querySelector('.custom-dropdown-menu');
+        const label = dd.querySelector('.dd-label');
+        const items = dd.querySelectorAll('.custom-dropdown-item');
+        if (!trigger || !menu) return;
+        trigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dd.classList.toggle('open');
+        });
+        items.forEach(item => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const text = item.querySelector('span:last-child') ? item.querySelector('span:last-child').textContent.trim() : item.textContent.trim();
+            if (label) label.textContent = text;
+            items.forEach(i => {
+              i.classList.remove('selected', 'text-primary', 'font-bold');
+              const dot = i.querySelector('.dd-item-dot');
+              if (dot) dot.classList.add('opacity-0');
+            });
+            item.classList.add('selected', 'text-primary', 'font-bold');
+            const dot = item.querySelector('.dd-item-dot');
+            if (dot) dot.classList.remove('opacity-0');
+            dd.classList.remove('open');
+          });
+        });
+      });
+      document.addEventListener('click', () => {
+        document.querySelectorAll('.custom-dropdown.open').forEach(dd => dd.classList.remove('open'));
+      });
+    }
+  </script>
+</body>
+</html>

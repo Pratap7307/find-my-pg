@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="web_dashboard" name="shell-type"/>
+  <title>ROOMLY | Host & Owner Property Management Hub</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../tokens.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            background: "var(--color-background)",
+            "background-alt": "var(--color-background-alt)",
+            surface: "var(--color-surface)",
+            "surface-elevated": "var(--color-surface-elevated)",
+            "surface-container-lowest": "var(--color-surface-container-lowest)",
+            "surface-container-low": "var(--color-surface-container-low)",
+            "surface-container": "var(--color-surface-container)",
+            "surface-container-high": "var(--color-surface-container-high)",
+            "surface-container-highest": "var(--color-surface-container-highest)",
+            "surface-variant": "var(--color-surface-container)",
+            "on-surface": "var(--color-text-primary)",
+            "on-surface-variant": "var(--color-text-secondary)",
+            outline: "var(--color-text-muted)",
+            "outline-variant": "var(--color-border)",
+            border: "var(--color-border)",
+            "border-subtle": "var(--color-border-subtle)",
+            primary: "var(--color-primary)",
+            "primary-hover": "var(--color-primary-hover)",
+            "on-primary": "var(--color-on-primary)",
+            "primary-container": "var(--color-primary)",
+            secondary: "var(--color-secondary)",
+            "secondary-container": "var(--color-secondary-surface)",
+            "on-secondary": "var(--color-on-secondary)",
+            tertiary: "var(--color-tertiary)",
+            "tertiary-container": "var(--color-tertiary-surface)",
+            "on-tertiary": "var(--color-on-tertiary)",
+            error: "var(--color-error)",
+            "error-container": "var(--color-error-surface)"
+          },
+          fontFamily: {
+            headline: ["Manrope", "sans-serif"],
+            body: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+        font-family: 'Inter', sans-serif;
+      }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { display: none; }
+    ::selection { background: var(--color-primary); color: var(--color-on-primary); }
+    header, aside { border-color: var(--color-border-subtle); }
+    button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased flex min-h-screen">
+  <!-- Desktop Host Sidebar -->
+  <aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest border-r border-white/5 z-50 hidden md:flex flex-col justify-between py-6 px-4">
+    <div class="flex flex-col gap-6">
+      <!-- Brand Logo -->
+      <a class="flex items-center gap-2.5 px-2" data-path="explore-rentals" href="#explore-rentals">
+        <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary font-headline font-bold text-lg shadow-sm">R</div>
+        <div class="flex flex-col">
+          <span class="font-headline font-bold text-lg text-on-surface leading-none">ROOMLY</span>
+          <span class="text-[10px] text-primary uppercase font-bold tracking-wider mt-1">Host & Owner Suite</span>
+        </div>
+      </a>
+
+      <!-- Cluster Selector -->
+      <div class="px-1">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-white/5">
+          <div class="flex flex-col">
+            <span class="text-[10px] text-outline uppercase font-semibold">Active Cluster</span>
+            <span class="text-xs font-bold text-white mt-0.5">Bengaluru Central</span>
+          </div>
+          <span class="material-symbols-outlined text-primary text-[18px]">apartment</span>
+        </div>
+      </div>
+
+      <!-- Nav Links -->
+      <nav class="flex flex-col gap-1 text-xs font-semibold" data-active-classes="bg-primary text-on-primary font-bold shadow-sm">
+        <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-primary text-on-primary font-bold shadow-sm transition-all" data-path="owner-overview" href="#owner-overview">
+          <span class="material-symbols-outlined text-[18px]">grid_view</span>
+          <span>Overview & Analytics</span>
+        </a>
+        <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all" data-path="search-rentals" href="#search-rentals">
+          <span class="material-symbols-outlined text-[18px]">home_work</span>
+          <span>Property Listings</span>
+        </a>
+        <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all" data-path="property-details" href="#property-details">
+          <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
+          <span>Tenant KYC & Leases</span>
+        </a>
+        <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-all" data-path="post-free-property" href="#post-free-property">
+          <span class="material-symbols-outlined text-[18px]">add_circle</span>
+          <span>Add New Listing</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Bottom Tenant Mode Link -->
+    <div class="flex flex-col gap-3 px-2 pt-4 border-t border-white/5">
+      <a class="flex items-center gap-2 text-primary text-xs font-bold hover:underline" data-path="explore-rentals" href="#explore-rentals">
+        <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+        <span>Switch to Tenant Mode</span>
+      </a>
+      <div class="flex items-center gap-2 p-2.5 rounded-xl bg-surface-container-low border border-white/5">
+        <span class="material-symbols-outlined text-secondary text-[18px]">support_agent</span>
+        <div class="flex flex-col text-[11px]">
+          <span class="text-outline">Host Concierge</span>
+          <span class="text-white font-bold">1800-209-7666</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="flex-1 md:pl-64 flex flex-col min-w-0">
+    <!-- Top Bar Header -->
+    <header class="fixed top-0 left-0 md:left-64 right-0 h-20 bg-surface/90 backdrop-blur-xl border-b border-white/5 z-40 flex items-center justify-between px-6 md:px-8">
+      <div class="flex items-center gap-4">
+        <div class="relative flex items-center">
+          <span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">search</span>
+          <input class="w-64 sm:w-80 h-10 pl-9 pr-4 bg-surface-container-lowest border border-white/10 rounded-xl text-xs text-white placeholder:text-outline focus:outline-none focus:border-primary transition-all" placeholder="Search unit, tenant phone, or lease ID..." type="text"/>
+        </div>
+        <span class="hidden sm:inline-flex px-2.5 py-1 rounded-md bg-secondary/15 text-secondary text-xs font-semibold">
+          GST Compliant
+        </span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="flex items-center bg-surface-container-high p-1 rounded-full text-xs">
+          <a class="px-3 py-1.5 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="explore-rentals" href="#explore-rentals">Tenant Mode</a>
+          <a class="px-3 py-1.5 rounded-full bg-primary text-on-primary font-bold shadow-sm" data-path="owner-overview" href="#owner-overview">Host Suite</a>
+        </div>
+        <a class="px-3.5 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-yellow-400 transition-all shadow-sm" data-path="post-free-property" href="#post-free-property">
+          + Add Unit
+        </a>
+      </div>
+    </header>
+
+    <main class="w-full pt-20 px-6 md:px-8 pb-16 bg-surface">
+      <div class="max-w-[1360px] mx-auto pt-6">
+        <!-- Top Greeting Bar -->
+        <section class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 mb-2 border-b border-white/5">
+          <div>
+            <div class="flex flex-wrap items-center gap-2.5 mb-1">
+              <h1 class="font-headline font-extrabold text-2xl sm:text-3xl text-white tracking-tight">Owner Hub & Operations</h1>
+              <span class="px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary text-xs font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">verified</span> Verified Host
+              </span>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
+              <span>Welcome back, <strong class="text-white">Rajesh Sharma</strong></span>
+              <span>•</span>
+              <span class="text-primary font-mono font-semibold">#RM-OWN-8821</span>
+              <span>•</span>
+              <span class="text-gray-300">Bengaluru Urban Cluster (3 Properties Active)</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center bg-surface-container-lowest border border-white/10 px-3 py-2 rounded-xl text-xs text-white">
+              <span class="material-symbols-outlined text-primary text-[16px] mr-2">calendar_today</span>
+              <select class="bg-transparent focus:outline-none cursor-pointer">
+                <option class="bg-surface-container-low">October 2024</option>
+                <option class="bg-surface-container-low">September 2024</option>
+                <option class="bg-surface-container-low">Q3 (Jul - Sep)</option>
+              </select>
+            </div>
+            <a class="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs hover:bg-yellow-400 transition-all shadow-sm flex items-center gap-1.5" data-path="post-free-property" href="#post-free-property">
+              <span class="material-symbols-outlined text-[16px]">add_business</span> + Add New Unit
+            </a>
+          </div>
+        </section>
+
+        <!-- 4 Key Metric Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+          <!-- Metric 1 -->
+          <div class="p-5 rounded-2xl bg-surface-container-lowest border border-white/5 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[11px] uppercase tracking-wider text-outline font-bold">Total Rent Collected</span>
+                <div class="font-headline font-extrabold text-2xl sm:text-3xl text-white mt-1">₹2,84,500</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">payments</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+              <span class="text-tertiary font-bold flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[14px]">trending_up</span> +8.4% vs last mo
+              </span>
+              <span class="text-outline">96.2% Collected</span>
+            </div>
+          </div>
+
+          <!-- Metric 2 -->
+          <div class="p-5 rounded-2xl bg-surface-container-lowest border border-white/5 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[11px] uppercase tracking-wider text-outline font-bold">Occupancy Rate</span>
+                <div class="font-headline font-extrabold text-2xl sm:text-3xl text-white mt-1">94%</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">bed</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+              <span class="text-white font-medium">18 / 19 Beds Filled</span>
+              <span class="text-red-400 font-semibold cursor-pointer hover:underline">1 Vacant Bed</span>
+            </div>
+          </div>
+
+          <!-- Metric 3 -->
+          <div class="p-5 rounded-2xl bg-surface-container-lowest border border-white/5 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[11px] uppercase tracking-wider text-outline font-bold">Pending KYC Leases</span>
+                <div class="font-headline font-extrabold text-2xl sm:text-3xl text-primary mt-1">4</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">verified_user</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+              <span class="text-gray-300">2 Inbound Reviews</span>
+              <span class="text-outline">Avg review &lt; 2h</span>
+            </div>
+          </div>
+
+          <!-- Metric 4 -->
+          <div class="p-5 rounded-2xl bg-surface-container-lowest border border-white/5 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-[11px] uppercase tracking-wider text-outline font-bold">Escrow Deposits Held</span>
+                <div class="font-headline font-extrabold text-2xl sm:text-3xl text-white mt-1">₹2,75,000</div>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center">
+                <span class="material-symbols-outlined text-[20px]">shield</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+              <span class="text-tertiary font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">lock</span> ROOMLY Trust
+              </span>
+              <span class="text-outline">Zero Disputes</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Main 2-Column: Portfolio & Applications Queue -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 my-6 items-start">
+          <!-- Property Portfolio (8 cols) -->
+          <div class="lg:col-span-8 bg-surface-container-lowest border border-white/5 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="font-headline font-bold text-lg text-on-surface">Managed Properties</h2>
+                <p class="text-xs text-on-surface-variant">Real-time status across active co-living clusters and flats.</p>
+              </div>
+              <a class="text-xs text-primary font-semibold hover:underline" data-path="search-rentals" href="#search-rentals">View All Units →</a>
+            </div>
+
+            <!-- Property List -->
+            <div class="space-y-3">
+              <!-- Item 1 -->
+              <div class="p-4 rounded-xl bg-surface-container-low border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/30 transition-all">
+                <div class="flex items-center gap-4 min-w-0">
+                  <img class="w-14 h-14 rounded-xl object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWLwOOnvAHqPHuC1l-5Obgnod7eofFdQaMu0wRZq8if3fJFkwBn9bhg83bNpwZuY7do9MaxMTrd07XKt7ZhORsITHRm-t43szcv_L14M7U93eGeV0yFm1FR_YSo5gAcNjEz8rVbT0D1lonWPIl9g3mfkNC3YVp2JNMYNZiKLptIfH4feDuRmL_YxWOKBfO7uXkPmqoEK4KGZsHWxGUeVkpjwLGXNnSkjAZ9X0DUanFILyLd-CcD2-Skw" alt="Zolo Aura"/>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-headline font-bold text-sm text-white truncate">Zolo Aura Co-Living</span>
+                      <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">Active</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-0.5">5th Block, Koramangala • 10 Total Rooms</p>
+                    <div class="flex items-center gap-2 mt-1 text-xs">
+                      <span class="text-primary font-medium">9 Occupied / 1 Vacant</span>
+                      <span class="text-outline">•</span>
+                      <span class="text-white font-semibold">Yield: ₹1,42,000/mo</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                  <a class="px-3 py-1.5 rounded-lg bg-surface-container text-white text-xs font-semibold hover:bg-surface-container-high transition-colors" data-path="property-details" href="#property-details">
+                    Manage Rooms
+                  </a>
+                  <button class="p-2 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary transition-all" title="Edit Listing" type="button">
+                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Item 2 -->
+              <div class="p-4 rounded-xl bg-surface-container-low border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/30 transition-all">
+                <div class="flex items-center gap-4 min-w-0">
+                  <img class="w-14 h-14 rounded-xl object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvyHmoe2DHA-8TZVAOZS-lEmnCMbMkmI_1JXZo_Hk7IUGKUpcbrnuSaJn97r5P18MgkbXzmZGeSKEsOXIg9zMk_bBR4VJb3FmDQKkW-S9iyLRIxe9bBx63leduf2cZfCVu9Zrzh4nn3AREwdtEOCGv16PxWaqZ97kTKaBNWQXtygZJlAC9vW4J-G0uchcft_a4a0huVbpg-_iOP042gkwTElPlVWv9TEFogVCD9_CNWCPehekH6Y8znw" alt="Greenwood"/>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-headline font-bold text-sm text-white truncate">Greenwood Studio Suites</span>
+                      <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">100% Full</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-0.5">100 Feet Rd, Indiranagar • 4 Boutique Suites</p>
+                    <div class="flex items-center gap-2 mt-1 text-xs">
+                      <span class="text-tertiary font-medium">4/4 Occupied</span>
+                      <span class="text-outline">•</span>
+                      <span class="text-white font-semibold">Yield: ₹88,000/mo</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                  <a class="px-3 py-1.5 rounded-lg bg-surface-container text-white text-xs font-semibold hover:bg-surface-container-high transition-colors" data-path="property-details" href="#property-details">
+                    Manage Rooms
+                  </a>
+                  <button class="p-2 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary transition-all" title="Edit Listing" type="button">
+                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Item 3 -->
+              <div class="p-4 rounded-xl bg-surface-container-low border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/30 transition-all">
+                <div class="flex items-center gap-4 min-w-0">
+                  <img class="w-14 h-14 rounded-xl object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaChjZ-puN9q9CzBbFDihCqhZ-ir-cAFBu7TwLL9Ab05iO1z7jIR6IZQmYtLkIjS2FsOo_OwdhW86rtvU-E1-qEQW_PnommtE2o66ODt7aqrO8iGyx5XlCvCRN6ICvVDdMyxLqs16_-AuaiDaIDEn2pUTVCel1AAdATpAH5bbSuHVOMIT7saGWjDb6qPtv14NWB2Ys7vjMpH2IOVGo0nDBMIvhJ1S2KJU9t3Hz-EYd4kgr8iUzpnqO3A" alt="Sunview Flat"/>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-headline font-bold text-sm text-white truncate">Sunview 2BHK Apartment</span>
+                      <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">Leased</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Sector 2, HSR Layout • 1 Independent Flat</p>
+                    <div class="flex items-center gap-2 mt-1 text-xs">
+                      <span class="text-gray-300 font-medium">Valid till Jul 2025</span>
+                      <span class="text-outline">•</span>
+                      <span class="text-white font-semibold">Yield: ₹32,000/mo</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+                  <a class="px-3 py-1.5 rounded-lg bg-surface-container text-white text-xs font-semibold hover:bg-surface-container-high transition-colors" data-path="property-details" href="#property-details">
+                    Manage Rooms
+                  </a>
+                  <button class="p-2 rounded-lg bg-surface-container text-primary hover:bg-primary hover:text-on-primary transition-all" title="Edit Listing" type="button">
+                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Applications & KYC Queue (4 cols) -->
+          <div class="lg:col-span-4 bg-surface-container-lowest border border-white/5 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="font-headline font-bold text-lg text-on-surface">KYC Inbound Queue</h2>
+                <p class="text-xs text-on-surface-variant">Prospective resident screening.</p>
+              </div>
+              <span class="w-6 h-6 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center">3</span>
+            </div>
+
+            <div class="space-y-3">
+              <!-- Applicant 1 -->
+              <div class="p-3.5 rounded-xl bg-surface-container-low border border-white/5 space-y-2">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">PS</div>
+                    <div>
+                      <div class="text-xs font-bold text-white">Priya Soni</div>
+                      <div class="text-[11px] text-on-surface-variant">Product Designer • Flipkart</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">785 CIBIL</span>
+                </div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">Unit: Single Deluxe #203 (Zolo Aura)</div>
+                <div class="flex items-center gap-2 pt-1">
+                  <button class="flex-1 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:bg-yellow-400 transition-colors" type="button">Approve Lease</button>
+                  <button class="px-3 py-1.5 rounded-lg bg-surface-container text-gray-300 hover:text-primary text-xs font-medium transition-colors" type="button">Inspect</button>
+                </div>
+              </div>
+
+              <!-- Applicant 2 -->
+              <div class="p-3.5 rounded-xl bg-surface-container-low border border-white/5 space-y-2">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">AN</div>
+                    <div>
+                      <div class="text-xs font-bold text-white">Arjun Nair</div>
+                      <div class="text-[11px] text-on-surface-variant">Fullstack Engineer • Swiggy</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">760 CIBIL</span>
+                </div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">Unit: Twin Sharing #102 (Zolo Aura)</div>
+                <div class="flex items-center gap-2 pt-1">
+                  <button class="flex-1 py-1.5 rounded-lg bg-surface-container text-primary font-bold text-xs hover:bg-surface-container-high transition-colors" type="button">Review Docs</button>
+                </div>
+              </div>
+
+              <!-- Applicant 3 -->
+              <div class="p-3.5 rounded-xl bg-surface-container-low border border-white/5 space-y-2">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">RD</div>
+                    <div>
+                      <div class="text-xs font-bold text-white">Rohan Das</div>
+                      <div class="text-[11px] text-on-surface-variant">Senior Consultant • Deloitte</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded bg-tertiary/15 text-tertiary text-[10px] font-bold">810 CIBIL</span>
+                </div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">Unit: Suite #4 (Greenwood)</div>
+                <div class="flex items-center gap-2 pt-1">
+                  <span class="text-[11px] text-primary flex items-center gap-1 font-semibold">
+                    <span class="material-symbols-outlined text-[14px]">history_edu</span> e-Sign Sent to Mobile
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Escrow Ledger Banner -->
+        <section class="mt-8 p-6 rounded-2xl bg-surface-container-lowest border border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+            </div>
+            <div>
+              <h3 class="font-headline font-bold text-base text-on-surface">Automated T+1 Rent Settlement</h3>
+              <p class="text-xs text-on-surface-variant mt-0.5">Rent paid via UPI or Card is settled to your verified HDFC bank account within 24 hours.</p>
+            </div>
+          </div>
+          <button class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-white text-xs font-semibold transition-colors shrink-0" type="button">
+            View Banking Ledger
+          </button>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

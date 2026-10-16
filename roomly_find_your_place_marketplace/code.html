@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Find My Home - Rajasthan's Location-First Rental Discovery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../tokens.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @layer base {
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+        font-family: 'Inter', sans-serif;
+      }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { display: none; }
+    ::selection { background: var(--color-primary); color: var(--color-on-primary); }
+    header { border-bottom: 1px solid var(--color-border-subtle); }
+    button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .autocomplete-item:hover { background-color: var(--color-surface-container); }
+
+    /* ── Form Controls & Native Select Contrast Shield ── */
+    select, input, textarea { color-scheme: dark; }
+    html:not(.dark) select, html:not(.dark) input, html:not(.dark) textarea,
+    [data-theme="light"] select, [data-theme="light"] input, [data-theme="light"] textarea { color-scheme: light; }
+    select option {
+      background-color: #141722 !important;
+      color: #F4F5F8 !important;
+    }
+    html:not(.dark) select option,
+    [data-theme="light"] select option {
+      background-color: #FFFFFF !important;
+      color: #0F172A !important;
+    }
+
+    /* ── Fix: Tab buttons — guaranteed contrast in light AND dark mode ── */
+    .tab-btn:not(.active) {
+      background-color: transparent !important;
+      color: var(--color-text-secondary, #555) !important;
+      border: 1.5px solid var(--color-border, #ddd);
+    }
+    .tab-btn:not(.active):hover {
+      background-color: var(--color-surface-container, rgba(0,0,0,0.06)) !important;
+      color: var(--color-primary) !important;
+      border-color: var(--color-primary) !important;
+    }
+    .tab-btn.active {
+      border: 1.5px solid transparent;
+    }
+
+    /* ── Fix: Persona toggle buttons contrast ── */
+    #persona-student, #persona-pro {
+      color: var(--color-text-secondary, #555) !important;
+    }
+    #persona-student:hover, #persona-pro:hover {
+      color: var(--color-primary) !important;
+    }
+    #persona-student.active-persona, #persona-pro.active-persona {
+      background: var(--color-primary);
+      color: var(--color-on-primary) !important;
+      border-radius: 8px;
+    }
+
+    /* ── Micro-animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+    @keyframes heroGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 255,200,0), 0.4); }
+      50%       { box-shadow: 0 0 0 8px rgba(var(--color-primary-rgb, 255,200,0), 0); }
+    }
+    .fade-up      { animation: fadeUp 0.5s ease both; }
+    .fade-up-1    { animation-delay: 0.05s; }
+    .fade-up-2    { animation-delay: 0.12s; }
+    .fade-up-3    { animation-delay: 0.22s; }
+    .fade-up-4    { animation-delay: 0.32s; }
+    .fade-up-5    { animation-delay: 0.42s; }
+
+    /* ── Card hover lift ── */
+    .listing-card {
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+    }
+    .listing-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    }
+    /* ── Corridor card ── */
+    .corridor-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .corridor-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+    }
+    /* ── Scroll-to-top FAB ── */
+    #scroll-top-fab {
+      position: fixed; bottom: 24px; right: 24px; z-index: 99;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--color-surface-container-highest);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #scroll-top-fab.visible {
+      opacity: 1; pointer-events: all;
+    }
+    #scroll-top-fab:hover { transform: translateY(-2px); }
+    /* ── Search button pulse on hover ── */
+    #btn-hero-search-execute:hover {
+      box-shadow: 0 0 0 6px rgba(255,200,0,0.25);
+    }
+    /* ── Trust pill animation ── */
+    .trust-badge-live-dot { animation: pulse-dot 1.5s ease infinite; }
+
+    /* ── Custom Dropdown (replaces native <select>) ── */
+    .custom-dropdown { position: relative; }
+    .custom-dropdown-trigger {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px 6px 10px;
+      background: var(--color-surface-container-low);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      user-select: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .custom-dropdown-trigger:hover {
+      border-color: var(--color-primary);
+      background: var(--color-surface-container);
+    }
+    .custom-dropdown-trigger .dd-chevron {
+      font-size: 16px;
+      color: var(--color-text-secondary);
+      transition: transform 0.2s ease;
+    }
+    .custom-dropdown.open .dd-chevron { transform: rotate(180deg); }
+    .custom-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 220px;
+      background: var(--color-surface-container-lowest);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+      z-index: 200;
+      overflow: hidden;
+      animation: ddOpen 0.15s ease;
+    }
+    @keyframes ddOpen {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .custom-dropdown.open .custom-dropdown-menu { display: block; }
+    .custom-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    .custom-dropdown-item:hover {
+      background: var(--color-surface-container-low);
+      color: var(--color-primary);
+    }
+    .custom-dropdown-item.selected {
+      color: var(--color-primary);
+      font-weight: 700;
+      background: var(--color-surface-container-low);
+    }
+    .custom-dropdown-item .dd-item-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      flex-shrink: 0;
+      opacity: 0;
+    }
+    .custom-dropdown-item.selected .dd-item-dot { opacity: 1; }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+  <!-- Top Navigation Header -->
+  <header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-b border-border-subtle">
+    <div class="h-20 max-w-[1360px] mx-auto px-6 md:px-8 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6">
+        <a class="flex items-center gap-2.5" data-path="explore-rentals" href="#explore-rentals">
+          <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary font-headline font-bold text-lg shadow-sm">
+            <span class="material-symbols-outlined text-[22px]">home_pin</span>
+          </div>
+          <div>
+            <span class="font-headline font-bold text-xl tracking-tight text-on-surface block leading-none">Find My Home</span>
+            <span class="text-[10px] font-semibold text-primary uppercase tracking-wider block mt-0.5">Rajasthan</span>
+          </div>
+        </a>
+        <!-- Header Custom Locality Dropdown (Zero OS Popup Contrast Bug) -->
+        <div class="custom-dropdown relative hidden sm:block" id="header-locality-dropdown">
+          <button type="button" class="custom-dropdown-trigger flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg border border-border-subtle hover:border-primary text-xs font-semibold text-on-surface transition-colors cursor-pointer" id="header-locality-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="material-symbols-outlined text-[18px] text-primary">location_on</span>
+            <span class="dd-label" id="header-locality-label">Jaipur (All Regions)</span>
+            <span class="material-symbols-outlined text-[16px] text-on-surface-variant dd-chevron transition-transform duration-200">expand_more</span>
+          </button>
+          <div class="custom-dropdown-menu absolute top-[calc(100%+6px)] left-0 min-w-[240px] bg-surface-elevated border border-border rounded-xl shadow-2xl py-1.5 z-[200] hidden" id="header-locality-menu" role="listbox">
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors selected text-primary font-bold" data-value="all-jaipur" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot"></span>
+              <span>Jaipur (All Regions)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Jagatpura" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Jagatpura (Colleges & Hub)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Malviya Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Malviya Nagar (WTP & MNIT)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Mansarovar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Mansarovar (Metro Corridor)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Vaishali Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Vaishali Nagar (Queens Rd)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Sitapura Industrial Area" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Sitapura & Tonk Rd (IT SEZ)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Pratap Nagar" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Pratap Nagar (Coaching Hub)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Ajmer Road (Mahindra SEZ & Manipal)" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Ajmer Road (Manipal Univ)</span>
+            </div>
+            <div class="custom-dropdown-item flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low hover:text-primary cursor-pointer transition-colors" data-value="Kukas & Delhi Road" role="option">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 dd-item-dot opacity-0"></span>
+              <span>Kukas (Arya & Amity)</span>
+            </div>
+          </div>
+          <select id="header-locality-select" class="sr-only" aria-hidden="true" tabindex="-1">
+            <option value="all-jaipur">Jaipur (All Regions)</option>
+            <option value="Jagatpura">Jagatpura (Colleges & Hub)</option>
+            <option value="Malviya Nagar">Malviya Nagar (WTP & MNIT)</option>
+            <option value="Mansarovar">Mansarovar (Metro Corridor)</option>
+            <option value="Vaishali Nagar">Vaishali Nagar (Queens Rd)</option>
+            <option value="Sitapura Industrial Area">Sitapura & Tonk Rd (IT SEZ)</option>
+            <option value="Pratap Nagar">Pratap Nagar (Coaching Hub)</option>
+            <option value="Ajmer Road (Mahindra SEZ & Manipal)">Ajmer Road (Manipal Univ)</option>
+            <option value="Kukas & Delhi Road">Kukas (Arya & Amity)</option>
+          </select>
+        </div>
+      </div>
+      <nav class="hidden lg:flex items-center gap-6 text-sm" data-active-classes="text-primary font-semibold">
+        <a class="text-primary font-semibold transition-colors" data-path="explore-rentals" href="#explore-rentals">Explore Stays</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="search-rentals" href="#search-rentals">Map & Search</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="property-details" href="#property-details">Featured Stay</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors" data-path="post-free-property" href="#post-free-property">Post Free Property</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex items-center bg-surface-container-high p-1 rounded-full text-xs">
+          <a class="px-3 py-1.5 rounded-full bg-primary text-on-primary font-semibold shadow-sm transition-all" data-path="explore-rentals" href="#explore-rentals">Tenant</a>
+          <a class="px-3 py-1.5 rounded-full text-on-surface-variant hover:text-primary transition-colors" data-path="owner-overview" href="#owner-overview">Host Suite</a>
+        </div>
+        <a class="px-4 py-2 rounded-xl bg-primary text-on-primary font-semibold text-xs hover:bg-yellow-400 transition-all shadow-sm" data-path="post-free-property" href="#post-free-property">
+          + List Room
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full pt-20 bg-surface">
+    <!-- Top Micro Trust Bar -->
+    <div class="w-full bg-surface-container-lowest/80 border-b border-border-subtle py-2.5 px-6">
+      <div class="max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-on-surface-variant">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+          <span class="text-on-surface font-medium">Rajasthan Location-First Rental Discovery</span>
+          <span class="hidden md:inline text-outline">• Jagatpura, Malviya Nagar, Mansarovar, Vaishali Nagar, Sitapura & Greater Jaipur Corridors</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1 text-primary font-medium">
+            <span class="material-symbols-outlined text-[15px]">verified</span> 100% Physical Field Audited
+          </span>
+          <span class="hidden sm:inline text-outline">•</span>
+          <span class="hidden sm:flex items-center gap-1 text-secondary font-medium">
+            <span class="material-symbols-outlined text-[15px]">security</span> Verified Deposit & Electricity Meters
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="relative w-full overflow-hidden bg-gradient-to-b from-surface-container-low/40 via-surface to-surface pt-10 pb-16 border-b border-border-subtle">
+      <div class="max-w-[1360px] mx-auto px-6 md:px-8">
+        <!-- Hero Header -->
+        <div class="max-w-3xl mx-auto text-center mb-8">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container border border-primary/20 text-primary text-xs font-semibold mb-4 shadow-sm">
+            <span class="material-symbols-outlined text-[16px]">location_searching</span>
+            Rajasthan's Location-First Verified Rental & Coliving Network
+          </div>
+          <h1 class="font-headline font-extrabold text-3xl sm:text-4xl md:text-5xl text-on-surface tracking-tight leading-[1.15] mb-4">
+            Find a place to stay <span class="text-primary underline decoration-secondary decoration-wavy decoration-2">near your college or office.</span>
+          </h1>
+          <p class="text-on-surface-variant text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            Search verified PGs, shared rooms, private flats, and independent houses across Jaipur and nearby educational & IT corridors. Zero brokerage, 1-month deposit cap, and exact distance calculations.
+          </p>
+        </div>
+
+        <!-- Prominent Location-First Search Console -->
+        <div class="max-w-4xl mx-auto bg-surface-container-lowest border border-border rounded-2xl shadow-2xl p-4 sm:p-6 relative z-10 fade-up fade-up-3">
+          
+          <!-- Audience / Persona Switcher & Category Tabs -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-border-subtle">
+            <!-- Property Types -->
+            <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-none" id="search-tabs">
+              <button class="tab-btn active px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-on-primary shadow-sm flex items-center gap-1.5 transition-all cursor-pointer" data-category="all" type="button">
+                <span class="material-symbols-outlined text-[16px]">travel_explore</span> All Stays
+              </button>
+              <button class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all" data-category="pg" type="button">
+                <span class="material-symbols-outlined text-[16px]">domain</span> Co-Living / PG
+              </button>
+              <button class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all" data-category="shared_room" type="button">
+                <span class="material-symbols-outlined text-[16px]">group</span> Shared Room
+              </button>
+              <button class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all" data-category="private_room" type="button">
+                <span class="material-symbols-outlined text-[16px]">single_bed</span> Private 1 RK
+              </button>
+              <button class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all" data-category="flat" type="button">
+                <span class="material-symbols-outlined text-[16px]">apartment</span> Flat
+              </button>
+              <button class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all" data-category="independent_house" type="button">
+                <span class="material-symbols-outlined text-[16px]">villa</span> House / Villa
+              </button>
+            </div>
+
+            <!-- Student vs Professional Persona Toggle -->
+            <div class="flex items-center gap-1 p-1 bg-surface-container-low rounded-xl border border-border-subtle shrink-0">
+              <button id="persona-student" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-on-surface-variant hover:text-primary transition-all flex items-center gap-1 cursor-pointer" title="Sort by proximity to Jaipur colleges & coaching hubs" type="button">
+                <span class="material-symbols-outlined text-[15px]">school</span> Student
+              </button>
+              <button id="persona-pro" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-on-surface-variant hover:text-primary transition-all flex items-center gap-1 cursor-pointer" title="Sort by proximity to Sitapura IT Park, WTP, & SEZs" type="button">
+                <span class="material-symbols-outlined text-[15px]">apartment</span> Professional
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Location Search Matrix -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
+            
+            <!-- Location / Landmark Input with Geocoding Autocomplete -->
+            <div class="md:col-span-6 bg-surface-container-low rounded-xl p-3 border border-border flex flex-col justify-center relative">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[11px] font-semibold text-outline uppercase tracking-wider flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[14px] text-primary">location_on</span> Locality, College or Landmark
+                </label>
+                <!-- Use My Location Button -->
+                <button id="btn-use-my-location" class="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer" title="Detect your actual browser location (permission asked on click)" type="button">
+                  <span class="material-symbols-outlined text-[14px]">my_location</span> Use My Location
+                </button>
+              </div>
+              <div class="flex items-center gap-2">
+                <input id="hero-location-input" autocomplete="off" class="w-full bg-transparent text-sm font-medium text-on-surface placeholder:text-outline focus:outline-none" placeholder="Type locality, college or landmark (e.g. Jagatpura, MNIT, SKIT)..." type="text" value="Jagatpura, Jaipur"/>
+                <button id="btn-manual-picker" class="text-on-surface-variant hover:text-primary transition-colors p-1 cursor-pointer" title="Choose on Map / Select from Jaipur Corridors" type="button">
+                  <span class="material-symbols-outlined text-[18px]">map</span>
+                </button>
+              </div>
+              
+              <!-- Autocomplete Dropdown List -->
+              <div id="autocomplete-dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-surface-container-lowest border border-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto"></div>
+            </div>
+
+            <!-- Configurable Search Radius (1, 3, 5, 10, 20 km) -->
+            <div class="md:col-span-3 bg-surface-container-low rounded-xl p-3 border border-border flex flex-col justify-center">
+              <label class="text-[11px] font-semibold text-outline uppercase tracking-wider mb-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-secondary">radar</span> Search Radius
+              </label>
+              <select id="hero-radius-select" class="w-full bg-transparent text-sm font-medium text-on-surface focus:outline-none cursor-pointer">
+                <option value="1">Within 1 km (Walking)</option>
+                <option value="3">Within 3 km (Cycle / Auto)</option>
+                <option value="5">Within 5 km (Short Commute)</option>
+                <option value="10" selected>Within 10 km (Standard)</option>
+                <option value="20">Within 20 km (Greater Jaipur)</option>
+              </select>
+            </div>
+
+            <!-- Monthly Budget -->
+            <div class="md:col-span-3 bg-surface-container-low rounded-xl p-3 border border-border flex flex-col justify-center">
+              <label class="text-[11px] font-semibold text-outline uppercase tracking-wider mb-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-primary">payments</span> Monthly Budget
+              </label>
+              <select id="hero-budget-select" class="w-full bg-transparent text-sm font-medium text-on-surface focus:outline-none cursor-pointer">
+                <option value="all">All Budgets</option>
+                <option value="under-8k">Under ₹8,000 / mo</option>
+                <option value="8k-15k">₹8,000 - ₹15,000 / mo</option>
+                <option value="15k-25k">₹15,000 - ₹25,000 / mo</option>
+                <option value="25k-plus">₹25,000+ / mo</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Quick Micro-Market Chips & Action CTA -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-1">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-xs text-outline font-medium mr-1">Near Jaipur:</span>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.8242" data-lng="75.8644" data-name="Jagatpura" type="button">Jagatpura</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.8539" data-lng="75.8052" data-name="Malviya Nagar" type="button">Malviya Nagar</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.8627" data-lng="75.7618" data-name="Mansarovar" type="button">Mansarovar</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.9069" data-lng="75.7423" data-name="Vaishali Nagar" type="button">Vaishali Nagar</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.7725" data-lng="75.8572" data-name="Sitapura" type="button">Sitapura IT</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.8015" data-lng="75.8165" data-name="Pratap Nagar" type="button">Pratap Nagar</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="26.8488" data-lng="75.5684" data-name="Ajmer Road (Manipal)" type="button">Ajmer Rd / Manipal</button>
+              <button class="chip-loc px-2.5 py-1 rounded-lg bg-surface-container-low text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container border border-border-subtle transition-all cursor-pointer" data-lat="27.0543" data-lng="75.9085" data-name="Kukas (Arya & Amity)" type="button">Kukas</button>
+            </div>
+            
+            <button id="btn-hero-search-execute" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-on-primary font-headline font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer" type="button">
+              <span class="material-symbols-outlined text-[20px]">search</span> Find Verified Stays
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Minimal Trust Metric Pills -->
+        <div class="max-w-4xl mx-auto mt-8 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 fade-up fade-up-4">
+          <div class="flex items-center gap-3 p-3.5 rounded-xl bg-surface-container-lowest border border-border">
+            <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">price_check</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-on-surface">0% Brokerage</div>
+              <div class="text-[11px] text-on-surface-variant">Zero fee guarantee</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-3.5 rounded-xl bg-surface-container-lowest border border-border">
+            <div class="w-9 h-9 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">verified</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-on-surface">100% KYC Verified</div>
+              <div class="text-[11px] text-on-surface-variant">Deed & ID checked</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-3.5 rounded-xl bg-surface-container-lowest border border-border">
+            <div class="w-9 h-9 rounded-lg bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">location_on</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-on-surface">Actual Coordinates</div>
+              <div class="text-[11px] text-on-surface-variant">Haversine verified distance</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-3.5 rounded-xl bg-surface-container-lowest border border-border">
+            <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-[20px]">shield</span>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-on-surface">1-Mo Deposit Cap</div>
+              <div class="text-[11px] text-on-surface-variant">Digital escrow safe</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top Corridors & Micro-Markets in & Near Jaipur (Rajasthan) -->
+    <section class="w-full py-16 bg-surface border-b border-border-subtle">
+      <div class="max-w-[1360px] mx-auto px-6 md:px-8">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <span class="text-xs uppercase tracking-wider text-primary font-bold">Jaipur Regional Footprint</span>
+            <h2 class="font-headline font-bold text-2xl sm:text-3xl text-on-surface mt-1">Key Student & Tech Corridors in Rajasthan</h2>
+            <p class="text-sm text-on-surface-variant mt-1">Direct verified listings across Jaipur's fastest growing education and business hubs.</p>
+          </div>
+          <a class="inline-flex items-center gap-1 text-primary text-sm font-semibold hover:underline" data-path="search-rentals" href="#search-rentals">
+            View all Jaipur Micro-Markets <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Jagatpura -->
+          <a class="corridor-card group rounded-2xl overflow-hidden bg-surface-container-lowest border border-border hover:border-primary/40 transition-all flex flex-col cursor-pointer" data-path="search-rentals?loc=Jagatpura&lat=26.8242&lng=75.8644&rad=5" href="#search-rentals?loc=Jagatpura&lat=26.8242&lng=75.8644&rad=5">
+            <div class="relative h-44 w-full overflow-hidden bg-surface-container">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=600&q=80" alt="Jagatpura Jaipur"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-primary text-[11px] font-semibold">SKIT &bull; JECRC Hub</span>
+              <div class="absolute bottom-3 left-3">
+                <div class="font-headline font-bold text-lg text-white image-overlay-text">Jagatpura</div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">Education Corridor & Bombay Hospital</div>
+              </div>
+            </div>
+            <div class="p-3 bg-surface-container-lowest flex items-center justify-between text-xs text-on-surface-variant">
+              <span>From <strong class="text-on-surface font-semibold">₹7,500</strong>/mo</span>
+              <span class="text-primary font-medium">850+ Stays</span>
+            </div>
+          </a>
+
+          <!-- Malviya Nagar -->
+          <a class="corridor-card group rounded-2xl overflow-hidden bg-surface-container-lowest border border-border hover:border-primary/40 transition-all flex flex-col cursor-pointer" data-path="search-rentals?loc=Malviya%20Nagar&lat=26.8539&lng=75.8052&rad=5" href="#search-rentals?loc=Malviya%20Nagar&lat=26.8539&lng=75.8052&rad=5">
+            <div class="relative h-44 w-full overflow-hidden bg-surface-container">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80" alt="Malviya Nagar Jaipur"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-primary text-[11px] font-semibold">MNIT &bull; WTP Corridor</span>
+              <div class="absolute bottom-3 left-3">
+                <div class="font-headline font-bold text-lg text-white image-overlay-text">Malviya Nagar</div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">World Trade Park & Gaurav Tower</div>
+              </div>
+            </div>
+            <div class="p-3 bg-surface-container-lowest flex items-center justify-between text-xs text-on-surface-variant">
+              <span>From <strong class="text-on-surface font-semibold">₹8,500</strong>/mo</span>
+              <span class="text-primary font-medium">620+ Stays</span>
+            </div>
+          </a>
+
+          <!-- Mansarovar -->
+          <a class="corridor-card group rounded-2xl overflow-hidden bg-surface-container-lowest border border-border hover:border-primary/40 transition-all flex flex-col cursor-pointer" data-path="search-rentals?loc=Mansarovar&lat=26.8627&lng=75.7618&rad=5" href="#search-rentals?loc=Mansarovar&lat=26.8627&lng=75.7618&rad=5">
+            <div class="relative h-44 w-full overflow-hidden bg-surface-container">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80" alt="Mansarovar Jaipur"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-primary text-[11px] font-semibold">Metro Connected</span>
+              <div class="absolute bottom-3 left-3">
+                <div class="font-headline font-bold text-lg text-white image-overlay-text">Mansarovar</div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">VT Road &bull; IIS University</div>
+              </div>
+            </div>
+            <div class="p-3 bg-surface-container-lowest flex items-center justify-between text-xs text-on-surface-variant">
+              <span>From <strong class="text-on-surface font-semibold">₹9,000</strong>/mo</span>
+              <span class="text-primary font-medium">740+ Stays</span>
+            </div>
+          </a>
+
+          <!-- Vaishali Nagar -->
+          <a class="corridor-card group rounded-2xl overflow-hidden bg-surface-container-lowest border border-border hover:border-primary/40 transition-all flex flex-col cursor-pointer" data-path="search-rentals?loc=Vaishali%20Nagar&lat=26.9069&lng=75.7423&rad=5" href="#search-rentals?loc=Vaishali%20Nagar&lat=26.9069&lng=75.7423&rad=5">
+            <div class="relative h-44 w-full overflow-hidden bg-surface-container">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80" alt="Vaishali Nagar Jaipur"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              <span class="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur text-primary text-[11px] font-semibold">Upmarket Hub</span>
+              <div class="absolute bottom-3 left-3">
+                <div class="font-headline font-bold text-lg text-white image-overlay-text">Vaishali Nagar</div>
+                <div class="text-[11px] text-gray-200 image-overlay-text">Amrapali Circle & Queens Road</div>
+              </div>
+            </div>
+            <div class="p-3 bg-surface-container-lowest flex items-center justify-between text-xs text-on-surface-variant">
+              <span>From <strong class="text-on-surface font-semibold">₹12,000</strong>/mo</span>
+              <span class="text-primary font-medium">490+ Stays</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Verified Stays Showcase (Jaipur Localities) -->
+    <section class="w-full py-16 bg-surface-container-low/30 border-b border-border-subtle">
+      <div class="max-w-[1360px] mx-auto px-6 md:px-8">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/15 text-secondary text-xs font-semibold mb-2">
+              <span class="material-symbols-outlined text-[15px]">verified</span> 100% In-Person Physical Audit Completed
+            </div>
+            <h2 class="font-headline font-bold text-2xl sm:text-3xl text-on-surface">Verified Stays in Jaipur</h2>
+            <p class="text-sm text-on-surface-variant mt-1">Field-inspected properties with verified distance, electricity meters, and refundable deposit terms.</p>
+          </div>
+          <a class="px-4 py-2 rounded-xl bg-surface-container-lowest border border-border text-on-surface text-xs font-semibold hover:border-primary transition-all flex items-center gap-1.5 self-start md:self-auto" data-path="search-rentals" href="#search-rentals">
+            Browse All Stays on Map <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </a>
+        </div>
+
+        <!-- 4 Clean Listing Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          
+          <!-- Card 1: Jagatpura -->
+          <div class="listing-card bg-surface-container-lowest border border-border rounded-2xl overflow-hidden hover:border-primary/40 flex flex-col group">
+            <a class="relative h-52 w-full block overflow-hidden bg-surface-container" data-path="property-details" href="#property-details">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=600&q=80" alt="Aura Elite Jagatpura"/>
+              <div class="absolute top-3 left-3 flex flex-col gap-1">
+                <span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur text-primary text-[11px] font-bold">0% Brokerage</span>
+              </div>
+              <button class="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 backdrop-blur text-white hover:text-red-400 transition-colors" title="Save to Shortlist" type="button">
+                <span class="material-symbols-outlined text-[18px]">favorite</span>
+              </button>
+            </a>
+            <div class="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Managed Co-Living / PG</span>
+                  <div class="flex items-center gap-1 text-xs text-on-surface">
+                    <span class="material-symbols-outlined text-[14px] text-primary fill-1">star</span>
+                    <span class="font-bold">4.88</span>
+                    <span class="text-outline text-[11px]">(46)</span>
+                  </div>
+                </div>
+                <a class="font-headline font-bold text-base text-on-surface hover:text-primary transition-colors line-clamp-1" data-path="property-details" href="#property-details">
+                  Aura Elite Luxury Coliving & PG
+                </a>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-1 mb-3">
+                  <span class="material-symbols-outlined text-[14px] text-primary">near_me</span> 0.4 km to SKIT &bull; Jagatpura, Jaipur
+                </p>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">3 Meals</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">200 Mbps WiFi</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Biometric</span>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-border-subtle">
+                <div class="flex items-baseline justify-between mb-3">
+                  <div>
+                    <span class="font-headline font-extrabold text-xl text-primary">₹8,500</span>
+                    <span class="text-xs text-outline">/mo</span>
+                  </div>
+                  <span class="text-[11px] text-secondary font-medium bg-surface-container px-2 py-0.5 rounded">1-Mo Deposit</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button class="py-2 px-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors text-center cursor-pointer" type="button">
+                    Schedule Visit
+                  </button>
+                  <button class="py-2 px-2 rounded-lg bg-primary hover:bg-yellow-400 text-on-primary text-xs font-bold transition-colors text-center shadow-sm cursor-pointer" type="button">
+                    Token ₹999
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Malviya Nagar -->
+          <div class="listing-card bg-surface-container-lowest border border-border rounded-2xl overflow-hidden hover:border-primary/40 flex flex-col group">
+            <a class="relative h-52 w-full block overflow-hidden bg-surface-container" data-path="property-details" href="#property-details">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80" alt="MNIT Scholars Malviya Nagar"/>
+              <div class="absolute top-3 left-3 flex flex-col gap-1">
+                <span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur text-primary text-[11px] font-bold">0% Brokerage</span>
+              </div>
+              <button class="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 backdrop-blur text-white hover:text-red-400 transition-colors" title="Save to Shortlist" type="button">
+                <span class="material-symbols-outlined text-[18px]">favorite</span>
+              </button>
+            </a>
+            <div class="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Premium Student PG</span>
+                  <div class="flex items-center gap-1 text-xs text-on-surface">
+                    <span class="material-symbols-outlined text-[14px] text-primary fill-1">star</span>
+                    <span class="font-bold">4.92</span>
+                    <span class="text-outline text-[11px]">(82)</span>
+                  </div>
+                </div>
+                <a class="font-headline font-bold text-base text-on-surface hover:text-primary transition-colors line-clamp-1" data-path="property-details" href="#property-details">
+                  MNIT Scholars Comfort Residency
+                </a>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-1 mb-3">
+                  <span class="material-symbols-outlined text-[14px] text-primary">near_me</span> 0.6 km to MNIT &bull; Malviya Nagar, Jaipur
+                </p>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Study Pods</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">North/South Meals</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Lift</span>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-border-subtle">
+                <div class="flex items-baseline justify-between mb-3">
+                  <div>
+                    <span class="font-headline font-extrabold text-xl text-primary">₹11,000</span>
+                    <span class="text-xs text-outline">/mo</span>
+                  </div>
+                  <span class="text-[11px] text-secondary font-medium bg-surface-container px-2 py-0.5 rounded">1-Mo Deposit</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button class="py-2 px-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors text-center cursor-pointer" type="button">
+                    Schedule Visit
+                  </button>
+                  <button class="py-2 px-2 rounded-lg bg-primary hover:opacity-90 active:scale-95 text-on-primary text-xs font-bold transition-all text-center shadow-sm cursor-pointer" type="button">
+                    Token ₹999
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Mansarovar -->
+          <div class="listing-card bg-surface-container-lowest border border-border rounded-2xl overflow-hidden hover:border-primary/40 flex flex-col group">
+            <a class="relative h-52 w-full block overflow-hidden bg-surface-container" data-path="property-details" href="#property-details">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80" alt="Metro View Mansarovar"/>
+              <div class="absolute top-3 left-3 flex flex-col gap-1">
+                <span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur text-primary text-[11px] font-bold">0% Brokerage</span>
+              </div>
+              <button class="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 backdrop-blur text-white hover:text-red-400 transition-colors" title="Save to Shortlist" type="button">
+                <span class="material-symbols-outlined text-[18px]">favorite</span>
+              </button>
+            </a>
+            <div class="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Independent 2 BHK Flat</span>
+                  <div class="flex items-center gap-1 text-xs text-on-surface">
+                    <span class="material-symbols-outlined text-[14px] text-primary fill-1">star</span>
+                    <span class="font-bold">4.79</span>
+                    <span class="text-outline text-[11px]">(31)</span>
+                  </div>
+                </div>
+                <a class="font-headline font-bold text-base text-on-surface hover:text-primary transition-colors line-clamp-1" data-path="property-details" href="#property-details">
+                  Metro View Executive 2 BHK Flat
+                </a>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-1 mb-3">
+                  <span class="material-symbols-outlined text-[14px] text-primary">near_me</span> 0.5 km to Metro &bull; Mansarovar, Jaipur
+                </p>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Modular Kitchen</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Car Parking</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Gated Security</span>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-border-subtle">
+                <div class="flex items-baseline justify-between mb-3">
+                  <div>
+                    <span class="font-headline font-extrabold text-xl text-primary">₹17,500</span>
+                    <span class="text-xs text-outline">/mo</span>
+                  </div>
+                  <span class="text-[11px] text-secondary font-medium bg-surface-container px-2 py-0.5 rounded">1-Mo Deposit</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button class="py-2 px-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors text-center cursor-pointer" type="button">
+                    Schedule Visit
+                  </button>
+                  <button class="py-2 px-2 rounded-lg bg-primary hover:opacity-90 active:scale-95 text-on-primary text-xs font-bold transition-all text-center shadow-sm cursor-pointer" type="button">
+                    Token ₹999
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Vaishali Nagar -->
+          <div class="listing-card bg-surface-container-lowest border border-border rounded-2xl overflow-hidden hover:border-primary/40 flex flex-col group">
+            <a class="relative h-52 w-full block overflow-hidden bg-surface-container" data-path="property-details" href="#property-details">
+              <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80" alt="The Queens Retreat Vaishali"/>
+              <div class="absolute top-3 left-3 flex flex-col gap-1">
+                <span class="px-2 py-0.5 rounded bg-black/80 backdrop-blur text-primary text-[11px] font-bold">0% Brokerage</span>
+              </div>
+              <button class="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 backdrop-blur text-white hover:text-red-400 transition-colors" title="Save to Shortlist" type="button">
+                <span class="material-symbols-outlined text-[18px]">favorite</span>
+              </button>
+            </a>
+            <div class="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Private Studio / 1 RK</span>
+                  <div class="flex items-center gap-1 text-xs text-on-surface">
+                    <span class="material-symbols-outlined text-[14px] text-primary fill-1">star</span>
+                    <span class="font-bold">4.95</span>
+                    <span class="text-outline text-[11px]">(54)</span>
+                  </div>
+                </div>
+                <a class="font-headline font-bold text-base text-on-surface hover:text-primary transition-colors line-clamp-1" data-path="property-details" href="#property-details">
+                  The Queens Retreat Studio
+                </a>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1 mt-1 mb-3">
+                  <span class="material-symbols-outlined text-[14px] text-primary">near_me</span> 0.3 km to Amrapali Circle &bull; Vaishali Nagar
+                </p>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Private Pantry</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Smart Lock</span>
+                  <span class="px-2 py-0.5 rounded bg-surface-container text-[11px] text-on-surface-variant">Inverter</span>
+                </div>
+              </div>
+              <div class="pt-3 border-t border-border-subtle">
+                <div class="flex items-baseline justify-between mb-3">
+                  <div>
+                    <span class="font-headline font-extrabold text-xl text-primary">₹13,000</span>
+                    <span class="text-xs text-outline">/mo</span>
+                  </div>
+                  <span class="text-[11px] text-secondary font-medium bg-surface-container px-2 py-0.5 rounded">1-Mo Deposit</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button class="py-2 px-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors text-center cursor-pointer" type="button">
+                    Schedule Visit
+                  </button>
+                  <button class="py-2 px-2 rounded-lg bg-primary hover:opacity-90 active:scale-95 text-on-primary text-xs font-bold transition-all text-center shadow-sm cursor-pointer" type="button">
+                    Token ₹999
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="w-full bg-surface-container-lowest border-t border-border-subtle py-12">
+    <div class="max-w-[1360px] mx-auto px-6 md:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
+        <div class="lg:col-span-2 pr-4">
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-on-primary font-headline font-bold text-base shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">home_pin</span>
+            </div>
+            <div>
+              <span class="font-headline font-bold text-lg text-on-surface block leading-none">Find My Home</span>
+              <span class="text-[10px] font-semibold text-primary uppercase tracking-wider block mt-0.5">Rajasthan</span>
+            </div>
+          </div>
+          <p class="text-xs text-on-surface-variant max-w-sm mb-4 leading-relaxed">
+            Rajasthan's location-first rental & coliving platform. 100% zero brokerage stays, digital lease contracts, and physical property audits across Jaipur and surrounding corridors.
+          </p>
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container border border-border-subtle text-primary text-xs font-semibold">
+            <span class="material-symbols-outlined text-[16px]">verified</span> 100% KYC Verified Owners & Physical Inspections
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-on-surface uppercase tracking-wider mb-3">Jaipur Corridors</div>
+          <ul class="space-y-2 text-xs text-on-surface-variant">
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Jagatpura" href="#search-rentals?loc=Jagatpura">Jagatpura (SKIT & JECRC)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Malviya%20Nagar" href="#search-rentals?loc=Malviya%20Nagar">Malviya Nagar (MNIT & WTP)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Mansarovar" href="#search-rentals?loc=Mansarovar">Mansarovar (Metro Corridor)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Vaishali%20Nagar" href="#search-rentals?loc=Vaishali%20Nagar">Vaishali Nagar (Queens Rd)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Sitapura" href="#search-rentals?loc=Sitapura">Sitapura IT & Tonk Road</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-on-surface uppercase tracking-wider mb-3">Nearby Corridors</div>
+          <ul class="space-y-2 text-xs text-on-surface-variant">
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Pratap%20Nagar" href="#search-rentals?loc=Pratap%20Nagar">Pratap Nagar (Coaching Hub)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Ajmer%20Road" href="#search-rentals?loc=Ajmer%20Road">Ajmer Road (Manipal & SEZ)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Kukas" href="#search-rentals?loc=Kukas">Kukas / Delhi Rd (Arya & Amity)</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Gopalpura" href="#search-rentals?loc=Gopalpura">Gopalpura Bypass Hub</a></li>
+            <li><a class="hover:text-primary transition-colors" data-path="search-rentals?loc=Raja%20Park" href="#search-rentals?loc=Raja%20Park">Raja Park & C-Scheme</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-on-surface uppercase tracking-wider mb-3">Jaipur Operations</div>
+          <p class="text-xs text-on-surface-variant mb-2">Dedicated field audit and tenant support center in Jaipur.</p>
+          <div class="font-headline font-bold text-primary text-base mb-1">0141-492-7666</div>
+          <div class="text-[11px] text-tertiary flex items-center gap-1 font-semibold">
+            <span class="material-symbols-outlined text-[14px]">shield</span> Escrow Protection Assured
+          </div>
+        </div>
+      </div>
+      <div class="pt-6 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-outline">
+        <div>&copy; 2026 Find My Home Technologies (Rajasthan) Pvt. Ltd. All rights reserved.</div>
+        <div class="flex items-center gap-4">
+          <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+          <a class="hover:text-primary transition-colors" href="#">Rental Terms</a>
+          <a class="hover:text-primary transition-colors" href="#">0% Brokerage Policy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+<!-- Scroll-to-top FAB -->
+<button id="scroll-top-fab" title="Back to top" aria-label="Scroll to top">
+  <span class="material-symbols-outlined text-[22px]">arrow_upward</span>
+</button>
+
+<script>
+  // Scroll-to-top FAB
+  const fab = document.getElementById('scroll-top-fab');
+  window.addEventListener('scroll', () => {
+    fab.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
+  fab.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  // Initialize custom dropdowns if running in standalone mode
+  if (typeof initCustomDropdowns === 'function') {
+    initCustomDropdowns();
+  } else {
+    document.querySelectorAll('.custom-dropdown').forEach(dd => {
+      const trigger = dd.querySelector('.custom-dropdown-trigger');
+      const menu = dd.querySelector('.custom-dropdown-menu');
+      const label = dd.querySelector('.dd-label');
+      const items = dd.querySelectorAll('.custom-dropdown-item');
+      if (!trigger || !menu) return;
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dd.classList.toggle('open');
+      });
+      items.forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const text = item.querySelector('span:last-child') ? item.querySelector('span:last-child').textContent.trim() : item.textContent.trim();
+          if (label) label.textContent = text;
+          items.forEach(i => {
+            i.classList.remove('selected', 'text-primary', 'font-bold');
+            const dot = i.querySelector('.dd-item-dot');
+            if (dot) dot.classList.add('opacity-0');
+          });
+          item.classList.add('selected', 'text-primary', 'font-bold');
+          const dot = item.querySelector('.dd-item-dot');
+          if (dot) dot.classList.remove('opacity-0');
+          dd.classList.remove('open');
+        });
+      });
+    });
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.custom-dropdown.open').forEach(dd => dd.classList.remove('open'));
+    });
+  }
+</script>
+</body>
+</html>
